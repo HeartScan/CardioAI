@@ -5,7 +5,7 @@
 ## Запуск backend
 
 ```bash
-pip install fastapi uvicorn
+pip install fastapi uvicorn writerai python-dotenv
 uvicorn server:app --reload
 ```
 
