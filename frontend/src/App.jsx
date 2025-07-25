@@ -24,7 +24,22 @@ export default function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             // TODO: если нужно — подставьте реальные данные наблюдения
-            observation: "0.92,0.87,0.83",
+            observation: {
+                          bpm: 74.8,
+                          confidence: 0.93,
+                          peaks: [
+                            { x: 132, y: 0.87 },
+                            { x: 247, y: 0.91 },
+                            { x: 364, y: 0.88 },
+                            { x: 480, y: 0.90 },
+                            { x: 596, y: 0.85 },
+                            { x: 713, y: 0.89 }
+                          ],
+                          peaksCount: 6,
+                          quality_score: 0.78,
+                          is_noisy: false,
+                          processingTime: "128.42 ms"
+                        }
           }),
         });
 
