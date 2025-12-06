@@ -1,0 +1,26 @@
+{
+  "id": "post_mi_68m",
+  "title": "Male 68, prior MI, on beta-blocker, episodes likely",
+  "peaks_pickle": "tests/peaks.pkl",
+  "fs": 100.0,
+  "profile": {
+    "sex": "male",
+    "age": 68,
+    "height_cm": 176,
+    "weight_kg": 86,
+    "smoking": "former",
+    "pack_years": 30,
+    "hypertension": "yes",
+    "lipids": "on statin",
+    "family_history": "father had MI at 59",
+    "medications": ["beta-blocker", "statin", "aspirin"],
+    "comorbidities": ["type 2 diabetes"],
+    "region": "EU",
+    "pregnant": false,
+    "communication_style": "concise, slightly worried",
+    "occupation": "retired",
+    "activity_level": "low"
+  }
+}
+
+
