@@ -1,14 +1,13 @@
-import json
+from typing import Any, Dict, List, Optional
+
+from openai import OpenAI  # type: ignore
 import os
 import time
-import urllib.error
-import urllib.request
-from typing import Any, Dict, List, Optional
 
 
 class OpenAIChatSession:
     """
-    Minimal OpenAI Chat Completions API client using stdlib only.
+    OpenAI Chat Completions API client using official SDK.
     Keeps message history and returns assistant replies.
     """
 
@@ -24,57 +23,49 @@ class OpenAIChatSession:
     ) -> None:
         self.model = model
         self.temperature = float(temperature)
-        self.base_url = (base_url or os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
-        self.api_key = api_key or os.environ.get("OPENAI_API_KEY") or ""
         self.timeout_s = timeout_s
         self.max_tokens = max_tokens
+        # Create SDK client; env OPENAI_API_KEY/OPENAI_BASE_URL are supported
+        client_kwargs: Dict[str, Any] = {}
+        if api_key or os.environ.get("OPENAI_API_KEY"):
+            client_kwargs["api_key"] = api_key or os.environ.get("OPENAI_API_KEY")
+        if base_url or os.environ.get("OPENAI_BASE_URL"):
+            client_kwargs["base_url"] = base_url or os.environ.get("OPENAI_BASE_URL")
+        self.client = OpenAI(**client_kwargs)
         self.messages: List[Dict[str, str]] = []
         if system_prompt:
             self.messages.append({"role": "system", "content": system_prompt})
 
-    def _http_post(self, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        url = f"{self.base_url}{path}"
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(url, data=data, method="POST")
-        req.add_header("Content-Type", "application/json")
-        req.add_header("Authorization", f"Bearer {self.api_key}")
-        with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
-            body = resp.read().decode("utf-8")
-            return json.loads(body)
-
     def _complete_once(self) -> Optional[str]:
-        # Endpoint for Chat Completions
-        path = "/chat/completions"
-        payload: Dict[str, Any] = {
-            "model": self.model,
-            "messages": self.messages,
-            "temperature": self.temperature,
-        }
-        if self.max_tokens is not None:
-            payload["max_tokens"] = int(self.max_tokens)
         try:
-            res = self._http_post(path, payload)
-            choice = (res.get("choices") or [{}])[0]
-            msg = (choice.get("message") or {}).get("content")
+            res = self.client.chat.completions.create(
+                model=self.model,
+                messages=self.messages,  # type: ignore
+                temperature=self.temperature,
+                max_tokens=int(self.max_tokens) if self.max_tokens is not None else None,
+                timeout=self.timeout_s,
+            )
+            msg = res.choices[0].message.content if res.choices else None  # type: ignore
             if msg:
                 self.messages.append({"role": "assistant", "content": msg})
             return msg
-        except urllib.error.HTTPError as e:
-            # Simple backoff retry once on 429/500s
-            if e.code in (429, 500, 502, 503):
-                time.sleep(1.5)
-                try:
-                    res = self._http_post(path, payload)
-                    choice = (res.get("choices") or [{}])[0]
-                    msg = (choice.get("message") or {}).get("content")
-                    if msg:
-                        self.messages.append({"role": "assistant", "content": msg})
-                    return msg
-                except Exception:
-                    return None
-            return None
         except Exception:
-            return None
+            # Simple one retry for transient issues
+            try:
+                time.sleep(1.0)
+                res = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=self.messages,  # type: ignore
+                    temperature=self.temperature,
+                    max_tokens=int(self.max_tokens) if self.max_tokens is not None else None,
+                    timeout=self.timeout_s,
+                )
+                msg = res.choices[0].message.content if res.choices else None  # type: ignore
+                if msg:
+                    self.messages.append({"role": "assistant", "content": msg})
+                return msg
+            except Exception:
+                return None
 
     def complete_with_user_input(self, user_input: str) -> Optional[str]:
         self.messages.append({"role": "user", "content": user_input})
