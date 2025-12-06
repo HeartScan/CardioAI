@@ -1,6 +1,7 @@
 import configparser
 import os
 from writerai import Writer
+import numpy as np
 
 
 def get_client():    
