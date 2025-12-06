@@ -31,6 +31,36 @@ def mistake_holder(obs, th=5):
     return obs
 
 
+def filter_peaks(peaks_x: list, N: int=0) -> list:
+    """
+    Filters out peaks that are too close to each other. - ПОПАДАНИЕ В ЗОНУ РЕЛАКСАЦИИ
+
+    Parameters
+    ----------
+    peaks : list
+        A list of peak indices.
+    N : int
+        The minimum distance between two accepted peaks.
+
+    Returns
+    -------
+    list
+        A new list of filtered peak indices.
+    """
+    # if not peaks:
+    #     return []
+    peaks=[i['x'] for i in peaks_x]
+    if N==0:
+        N=np.diff(peaks).mean()/2
+
+    filtered = [peaks[0]]
+    for i in range(1, len(peaks)):
+        if peaks[i] - filtered[-1] > N:
+            filtered.append(peaks[i])
+    return [{'x': i} for i in filtered]
+    
+
+
 def preprocess_obs(observation, fs = 100.0):
     """
     Возвращает подробную статистику по вариативности ЧСС:
@@ -50,6 +80,11 @@ def preprocess_obs(observation, fs = 100.0):
         Координаты 'x' заданы в отсчётах при fs = 100 Гц.
     """
     peaks = observation.get("peaks", [])
+
+    # ------ !!!ATTENTION!!! ---------
+    # Если на бэке не произведена фильтрация на предмет пиков, 
+    # попавших в зону релаксации, мы должны сделать это здесь
+    peaks=filter_peaks(peaks)
 
     # ------ подготовка базовых рядов ---------------------------------------  
     rr_intervals = [
@@ -107,7 +142,7 @@ def preprocess_obs(observation, fs = 100.0):
         "episodes_count": episodes_count,
         "episodes_per_hour": episodes_per_hour,
         "episodes_timestamps": episodes_timestamps,
-    }, th=3)
+    }, th=4)
 
 
 
