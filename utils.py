@@ -2,6 +2,7 @@ import configparser
 import os
 from writerai import Writer
 import numpy as np
+from scipy.special import softmax
 
 
 def get_client():    
@@ -66,8 +67,12 @@ def preprocess_obs(observation, fs = 100.0):
     max_bpm = np.max(instantaneous_bpm)
 
     # ------ поиск эпизодов --------------------------------------------------
+    #-------- !!!ATTENTION!!!----------------
+    #-------- old one ----------
     # Порог – одно стандартное отклонение
-    sigma = np.std(bpm_deviation)
+    #sigma = np.std(bpm_deviation)
+    #-------- new one ----------
+    sigma = np.std(bpm_deviation)+np.std(bpm_deviation)*softmax(instantaneous_bpm).std()
 
     # Индексы интервалов, где отклонение превышает σ (только положит.)
     idx = np.where(np.abs(np.array(bpm_deviation))>sigma)[0]
