@@ -3,3 +3,7 @@ uvicorn
 writerai
 python-dotenv
 pydantic
+
+numpy
+scipy
+
