@@ -93,7 +93,6 @@ def preprocess_obs(observation, fs = 100.0):
     ]
     instantaneous_bpm = 60.0 / np.array(rr_intervals)
 
-
     # ------ статистика ЧСС ----------- 
     mean_bpm = np.mean(instantaneous_bpm)
     bpm_deviation = np.array(instantaneous_bpm)-mean_bpm 
