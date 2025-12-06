@@ -1,0 +1,16 @@
+{
+  "openai": {
+    "patient_model": "gpt-4o-mini",
+    "critic_model": "gpt-4o-mini",
+    "patient_temperature": 0.8,
+    "critic_temperature": 0.3
+  },
+  "dialog": {
+    "max_turns": 8
+  },
+  "io": {
+    "runs_dir": "tests/runs"
+  }
+}
+
+
