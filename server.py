@@ -6,9 +6,9 @@ import uvicorn
 from typing import Any
 
 
-from pathlib import Path
-import json
-from fastapi import Query
+# from pathlib import Path
+# import json
+# from fastapi import Query
 
 
 from controller import Controller
@@ -33,38 +33,38 @@ class ChatPayload(BaseModel):
     message: str
 
 
-# @app.post("/api/init")
-# def init_chat(payload: InitPayload):
-#     global controller
-#     controller = Controller(payload.observation)
-#     return {
-#         "status": "initialized",
-#         "response": controller.get_init_response(),   # показываем фронту
-#         "history": controller.get_history(),          # (опционально)
-#     }
-
 @app.post("/api/init")
-def init_chat(payload: InitPayload, idx: int = Query(0, ge=0)):
+def init_chat(payload: InitPayload):
     global controller
-
-    repo_root = Path(__file__).resolve().parent
-    examples_path = repo_root / "resp_example" / "heart_rate_first10_responses.json"
-    records = json.loads(examples_path.read_text(encoding="utf-8"))
-
-    if not isinstance(records, list) or not records:
-        raise HTTPException(status_code=500, detail="Examples file is empty or invalid")
-
-    if idx >= len(records):
-        raise HTTPException(status_code=400, detail=f"idx out of range: {idx} (len={len(records)})")
-
-    observation = records[idx]
-    controller = Controller(observation)
-
+    controller = Controller(payload.observation)
     return {
         "status": "initialized",
-        "response": controller.get_init_response(),
-        "history": controller.get_history(),
+        "response": controller.get_init_response(),   # показываем фронту
+        "history": controller.get_history(),          # (опционально)
     }
+
+# @app.post("/api/init")
+# def init_chat(payload: InitPayload, idx: int = Query(0, ge=0)):
+#     global controller
+
+#     repo_root = Path(__file__).resolve().parent
+#     examples_path = repo_root / "resp_example" / "heart_rate_first10_responses.json"
+#     records = json.loads(examples_path.read_text(encoding="utf-8"))
+
+#     if not isinstance(records, list) or not records:
+#         raise HTTPException(status_code=500, detail="Examples file is empty or invalid")
+
+#     if idx >= len(records):
+#         raise HTTPException(status_code=400, detail=f"idx out of range: {idx} (len={len(records)})")
+
+#     observation = records[idx]
+#     controller = Controller(observation)
+
+#     return {
+#         "status": "initialized",
+#         "response": controller.get_init_response(),
+#         "history": controller.get_history(),
+#     }
 
 
 @app.post("/api/chat")
