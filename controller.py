@@ -1,5 +1,8 @@
-from utils import get_settings, preprocess_obs
-from chat_model import WriterChatSession
+import json
+from typing import Any
+
+from utils import get_settings, preprocess_obs, normalize_observation
+from chat_model import ChatSession
 
 
 class Controller:
@@ -12,16 +15,18 @@ class Controller:
         чтобы фронт мог тут же показать результат.
     """
 
-    def __init__(self, observation: str) -> None:
+    def __init__(self, observation: Any) -> None:
         # 1) Системный промпт и клиент
         self.system_prompt = get_settings(section="DEFAULT",
                                           variable="SYSTEM_PROMPT")
-        self.client = WriterChatSession(system_prompt=self.system_prompt)
+        self.client = ChatSession(system_prompt=self.system_prompt)
 
         # 2) Препроцессинг и первый запрос к модели
-        self.observation = preprocess_obs(observation)
+        obs_norm, fs = normalize_observation(observation)
+        metrics = preprocess_obs(obs_norm, fs=fs)
+        self.observation = metrics
         self.init_response: str = self.client.send_message(
-            f"SCG data:\n{self.observation}"
+            "SCG data:\n" + json.dumps(metrics, ensure_ascii=False)
         )
 
     # ---------- API, вызываемая из server.py ----------

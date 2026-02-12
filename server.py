@@ -2,17 +2,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
-import os
-from dotenv import load_dotenv
 #import logger
+from typing import Any
 
 from controller import Controller
-
-load_dotenv(".env")
-
-print()
-print(os.environ.get("WRITER_API_KEY"))
-print()
 
 app = FastAPI()
 app.add_middleware(
@@ -24,9 +17,10 @@ app.add_middleware(
 )
 
 controller: Controller
+controller = None
 
 class InitPayload(BaseModel):
-    observation: str
+    observation: Any
 
 class ChatPayload(BaseModel):
     message: str

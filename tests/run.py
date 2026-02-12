@@ -4,6 +4,7 @@ import json
 import os
 import pickle
 import sys
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -11,8 +12,6 @@ from typing import Any, Dict, List, Optional, Tuple
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TESTS_ROOT = Path(__file__).resolve().parent
 sys.path.append(str(REPO_ROOT))
-
-from dotenv import load_dotenv  # type: ignore
 
 # Reuse existing pipeline parts
 from utils import preprocess_obs  # type: ignore
@@ -22,14 +21,30 @@ from tests.providers.writer_adapter import WriterCardioAdapter  # type: ignore
 from tests.providers.openai_adapter import OpenAIChatSession  # type: ignore
 
 
-def load_env() -> None:
-    # Try both root .env and tests/.env (if present)
-    root_env = REPO_ROOT / ".env"
-    tests_env = TESTS_ROOT / ".env"
-    if root_env.exists():
-        load_dotenv(dotenv_path=root_env)
-    if tests_env.exists():
-        load_dotenv(dotenv_path=tests_env, override=False)
+DEBUG_LOG_PATH = REPO_ROOT / ".cursor" / "debug.log"
+DEBUG_RUN_ID = f"post-fix-{int(time.time())}"
+os.environ["CARDIOAI_DEBUG_RUN_ID"] = DEBUG_RUN_ID
+
+
+def _dbg(hypothesis_id: str, location: str, message: str, data: Optional[Dict[str, Any]] = None) -> None:
+    # #region agent log
+    try:
+        payload = {
+            "id": f"log_{int(time.time() * 1000)}_{hypothesis_id}",
+            "timestamp": int(time.time() * 1000),
+            "location": location,
+            "message": message,
+            "data": data or {},
+            "sessionId": "debug-session",
+            "runId": DEBUG_RUN_ID,
+            "hypothesisId": hypothesis_id,
+        }
+        DEBUG_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+    # #endregion
 
 
 def read_json(path: Path) -> Any:
@@ -121,6 +136,59 @@ def safe_load_peaks(pkl_path: Path) -> List[Dict[str, float]]:
     raise ValueError(f"Unsupported peaks format in {pkl_path}")
 
 
+def load_observation_from_pickle(pkl_path: Path, obs_index: int = 0) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """
+    Loads a single observation dict compatible with utils.preprocess_obs().
+
+    Supported pickle shapes:
+      - list[{"peaks": [...]}]  -> dataset of observations; choose obs_index
+      - {"peaks": [...]}        -> single observation
+      - list[{"x":..,"y":..}]   -> peaks list directly -> wrap into {"peaks": ...}
+      - list[int|float]         -> x indices -> wrap into {"peaks":[{"x":..,"y":1.0}]}
+
+    Returns: (observation_dict, info_dict)
+    """
+    with pkl_path.open("rb") as f:
+        obj = pickle.load(f)
+    _dbg("A", "tests/run.py:load_observation_from_pickle", "pickle_loaded", {"type": str(type(obj)), "obs_index": obs_index})
+
+    # Defer numpy import until needed
+    try:
+        import numpy as np  # type: ignore
+        if isinstance(obj, np.ndarray):
+            obj = obj.tolist()
+    except Exception:
+        pass
+
+    info: Dict[str, Any] = {"source": str(pkl_path), "obs_index": obs_index}
+
+    # Dataset: list of observations
+    if isinstance(obj, list) and obj and isinstance(obj[0], dict) and "peaks" in obj[0]:
+        info["obs_count_total"] = len(obj)
+        _dbg("A", "tests/run.py:load_observation_from_pickle", "dataset_detected", {"obs_count_total": len(obj)})
+        if obs_index < 0 or obs_index >= len(obj):
+            raise IndexError(f"obs_index out of range: {obs_index} (total {len(obj)})")
+        obs = obj[obs_index]
+        # Normalize peaks to include y if missing
+        peaks = obs.get("peaks", [])
+        norm_peaks = [{"x": float(p["x"]), "y": float(p.get("y", 1.0))} for p in peaks] if peaks else []
+        _dbg("A", "tests/run.py:load_observation_from_pickle", "observation_selected", {"obs_index": obs_index, "peaks_count": len(norm_peaks)})
+        return {"peaks": norm_peaks}, info
+
+    # Single observation dict
+    if isinstance(obj, dict) and "peaks" in obj:
+        peaks = obj.get("peaks", [])
+        norm_peaks = [{"x": float(p["x"]), "y": float(p.get("y", 1.0))} for p in peaks] if peaks else []
+        info["obs_count_total"] = 1
+        _dbg("A", "tests/run.py:load_observation_from_pickle", "single_observation_detected", {"peaks_count": len(norm_peaks)})
+        return {"peaks": norm_peaks}, info
+
+    # Peaks list directly (reuse existing normalizer)
+    peaks = safe_load_peaks(pkl_path)
+    info["obs_count_total"] = 1
+    return {"peaks": peaks}, info
+
+
 def build_patient_system_prompt(profile: Dict[str, Any]) -> str:
     system_tpl_path = TESTS_ROOT / "prompts" / "patient_system.txt"
     with system_tpl_path.open("r", encoding="utf-8") as f:
@@ -150,14 +218,19 @@ def stops_on_completion(cardio_reply: str) -> bool:
     return False
 
 
-def run_single_scenario(scenario: Dict[str, Any], config: Dict[str, Any]) -> Tuple[Path, Dict[str, Any], List[Dict[str, Any]]]:
+def run_single_scenario(
+    scenario: Dict[str, Any],
+    config: Dict[str, Any],
+    obs_index: int = 0,
+    peaks_limit: Optional[int] = None,
+) -> Tuple[Path, Dict[str, Any], List[Dict[str, Any]]]:
     """
     Returns: (run_dir, metadata, conversation)
     """
     runs_dir = Path(config.get("io", {}).get("runs_dir", str(TESTS_ROOT / "runs")))
     ensure_dir(runs_dir)
-    ts = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-    run_dir = runs_dir / f"{scenario.get('id','scenario')}_{ts}"
+    ts = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%S%fZ")
+    run_dir = runs_dir / f"{scenario.get('id','scenario')}_obs{obs_index}_{ts}"
     ensure_dir(run_dir)
 
     # Prepare observation (SCG metrics) via existing pipeline
@@ -165,18 +238,41 @@ def run_single_scenario(scenario: Dict[str, Any], config: Dict[str, Any]) -> Tup
     peaks_path = Path(peaks_rel)
     if not peaks_path.is_absolute():
         peaks_path = REPO_ROOT / peaks_rel
-    peaks_full = safe_load_peaks(peaks_path)
-    # Optional external cap on number of peaks used (set via CLI in main())
-    limit_n = scenario.get("_limit_peaks_n")
-    peaks = peaks_full[: int(limit_n)] if (limit_n is not None) else peaks_full
-    obs_raw = {"peaks": peaks}
+    obs_raw, obs_info = load_observation_from_pickle(peaks_path, obs_index=obs_index)
+    if peaks_limit is not None and peaks_limit > 0:
+        obs_raw = {"peaks": obs_raw.get("peaks", [])[: int(peaks_limit)]}
+    _dbg("A", "tests/run.py:run_single_scenario", "observation_ready", {"obs_index": obs_index, "peaks_count_used": len(obs_raw.get("peaks", [])), "peaks_limit": peaks_limit})
     fs = scenario.get("fs", 100.0)
     # preprocess_obs signature defaults fs=100.0; wrap if FS provided
     metrics = preprocess_obs(obs_raw, fs=fs) if fs else preprocess_obs(obs_raw)
+    _dbg("A", "tests/run.py:run_single_scenario", "metrics_computed", {"keys": list(metrics.keys()), "episodes_count": metrics.get("episodes_count")})
 
-    # Initialize Writer (CardioAI)
-    writer = WriterCardioAdapter()
+    # Initialize CardioAI (HF OpenAI-compatible endpoint)
+    writer_timeout_s = float(config.get("writer", {}).get("timeout_s", 60.0))
+    _dbg("B", "tests/run.py:run_single_scenario", "cardio_init_start", {"provider": "hf_openai_compat", "timeout_s": writer_timeout_s})
+    writer = WriterCardioAdapter(timeout_s=writer_timeout_s)
     cardio_first = writer.init_with_metrics(metrics)
+    cardio_err = writer.get_last_error()
+    _dbg("B", "tests/run.py:run_single_scenario", "cardio_init_done", {"cardio_first_len": len(cardio_first or ""), "err": cardio_err})
+    if cardio_first is None:
+        # Persist a minimal run and stop early (can't continue dialog)
+        conversation: List[Dict[str, Any]] = []
+        conversation.append({
+            "role": "cardio",
+            "content": f"[ERROR] CardioAI initialization failed ({cardio_err}). Check HF_TOKEN / [HF] BASE_URL / network / timeout.",
+            "ts": datetime.datetime.utcnow().isoformat() + "Z"
+        })
+        metadata = {
+            "scenario": scenario,
+            "models": {"writer_model": writer.model_name},
+            "parameters": {"writer_timeout_s": writer_timeout_s},
+            "metrics": metrics,
+            "observation_info": {**obs_info, "fs": fs, "peaks_limit": peaks_limit, "peaks_count_used": len(obs_raw.get("peaks", []))},
+            "error": {"stage": "cardio_init", "kind": cardio_err},
+        }
+        (run_dir / "conversation.json").write_text(json.dumps(conversation, ensure_ascii=False, indent=2), encoding="utf-8")
+        (run_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+        return run_dir, metadata, conversation
 
     # Initialize Patient (OpenAI)
     patient_profile = scenario.get("profile", {})
@@ -188,6 +284,7 @@ def run_single_scenario(scenario: Dict[str, Any], config: Dict[str, Any]) -> Tup
         system_prompt=patient_system,
         temperature=patient_temperature,
     )
+    _dbg("C", "tests/run.py:run_single_scenario", "patient_session_ready", {"model": patient_model})
 
     # Conversation loop
     max_turns = int(config.get("dialog", {}).get("max_turns", 8))
@@ -201,7 +298,7 @@ def run_single_scenario(scenario: Dict[str, Any], config: Dict[str, Any]) -> Tup
             "ts": datetime.datetime.utcnow().isoformat() + "Z"
         })
 
-    # First cardio response already produced by Writer
+    # First cardio response already produced during cardio init (CardioAI / HF)
     log("cardio", cardio_first or "")
 
     # Alternate turns: cardio -> patient -> cardio -> ...
@@ -209,13 +306,27 @@ def run_single_scenario(scenario: Dict[str, Any], config: Dict[str, Any]) -> Tup
     for _ in range(max_turns):
         if last_from_cardio:
             # Patient replies to cardio
+            _dbg("C", "tests/run.py:run_single_scenario", "patient_turn_start", {"turn_role": "patient"})
             patient_reply = patient.complete_with_user_input(conversation[-1]["content"])
-            log("patient", patient_reply or "")
+            if not patient_reply:
+                err = getattr(patient, "get_last_error", lambda: {"type": None, "message": None})()
+                log("patient", f"[ERROR] Patient model failed: {err}")
+                _dbg("C", "tests/run.py:run_single_scenario", "patient_turn_failed", {"err": err})
+                break
+            log("patient", patient_reply)
+            _dbg("C", "tests/run.py:run_single_scenario", "patient_turn_done", {"reply_len": len(patient_reply)})
             last_from_cardio = False
         else:
             # Cardio replies to patient
+            _dbg("B", "tests/run.py:run_single_scenario", "cardio_turn_start", {"turn_role": "cardio"})
             cardio_reply = writer.send_user_message(conversation[-1]["content"])
-            log("cardio", cardio_reply or "")
+            if not cardio_reply:
+                err = writer.get_last_error()
+                log("cardio", f"[ERROR] CardioAI reply failed: {err}")
+                _dbg("B", "tests/run.py:run_single_scenario", "cardio_turn_failed", {"err": err})
+                break
+            log("cardio", cardio_reply)
+            _dbg("B", "tests/run.py:run_single_scenario", "cardio_turn_done", {"reply_len": len(cardio_reply), "err": writer.get_last_error()})
             last_from_cardio = True
             if stops_on_completion(cardio_reply or ""):
                 break
@@ -232,13 +343,12 @@ def run_single_scenario(scenario: Dict[str, Any], config: Dict[str, Any]) -> Tup
             "patient_temperature": patient_temperature
         },
         "metrics": metrics,
-        "peaks_info": {
-            "source": str(peaks_path),
+        "observation_info": {
+            **obs_info,
             "fs": fs,
-            "limit_N": limit_n,
-            "count_total": len(peaks_full),
-            "count_used": len(peaks)
-        }
+            "peaks_limit": peaks_limit,
+            "peaks_count_used": len(obs_raw.get("peaks", [])),
+        },
     }
     (run_dir / "conversation.json").write_text(json.dumps(conversation, ensure_ascii=False, indent=2), encoding="utf-8")
     (run_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -247,6 +357,16 @@ def run_single_scenario(scenario: Dict[str, Any], config: Dict[str, Any]) -> Tup
 
 
 def evaluate_run(run_dir: Path, metadata: Dict[str, Any], conversation: List[Dict[str, Any]], config: Dict[str, Any]) -> Dict[str, Any]:
+    # If Writer failed, evaluation is meaningless; persist a structured skip
+    if isinstance(metadata, dict) and metadata.get("error", {}).get("stage") in ("writer_init", "cardio_init"):
+        evaluation_json = {
+            "error": "skipped",
+            "reason": "cardio_init_failed",
+            "cardio_error": metadata.get("error", {}),
+        }
+        (run_dir / "evaluation.json").write_text(json.dumps(evaluation_json, ensure_ascii=False, indent=2), encoding="utf-8")
+        return evaluation_json
+
     critic_model = config.get("openai", {}).get("critic_model", "gpt-4o-mini")
     critic_temperature = float(config.get("openai", {}).get("critic_temperature", 0.3))
     critic_system = build_critic_system_prompt()
@@ -256,6 +376,7 @@ def evaluate_run(run_dir: Path, metadata: Dict[str, Any], conversation: List[Dic
         system_prompt=critic_system,
         temperature=critic_temperature,
     )
+    _dbg("C", "tests/run.py:evaluate_run", "critic_session_ready", {"model": critic_model})
 
     # Build a single user message with all context to limit tokens
     convo_lines = []
@@ -277,6 +398,16 @@ def evaluate_run(run_dir: Path, metadata: Dict[str, Any], conversation: List[Dic
     )
 
     evaluation_str = critic.complete_with_user_input(eval_user_prompt)
+    _dbg("C", "tests/run.py:evaluate_run", "critic_response_received", {"len": len(evaluation_str or "")})
+    if not evaluation_str:
+        err = getattr(critic, "get_last_error", lambda: {"type": None, "message": None})()
+        evaluation_json = {
+            "error": "openai_failed",
+            "openai_error": err,
+            "hint": "If error is RateLimitError/insufficient_quota, check OpenAI billing/quota.",
+        }
+        (run_dir / "evaluation.json").write_text(json.dumps(evaluation_json, ensure_ascii=False, indent=2), encoding="utf-8")
+        return evaluation_json
     try:
         evaluation_json = json.loads(evaluation_str or "{}")
     except Exception:
@@ -320,12 +451,12 @@ def parse_args() -> argparse.Namespace:
     g.add_argument("--scenario", type=str, help="Path to a scenario JSON file under tests/scenarios/")
     g.add_argument("--all", action="store_true", help="Run all scenarios in tests/scenarios/")
     p.add_argument("--report", type=str, help="Generate report for a given run dir (no execution)")
-    p.add_argument("--N", type=int, help="Use only first N peaks from peaks.pkl for testing")
+    p.add_argument("--N", type=int, help="Run first N observations from peaks.pkl (dataset mode)")
+    p.add_argument("--peaksN", type=int, help="Optional: cap number of peaks within each observation")
     return p.parse_args()
 
 
 def main() -> None:
-    load_env()
     args = parse_args()
     cfg = load_config()
 
@@ -355,14 +486,20 @@ def main() -> None:
 
     for sc_path in scenarios:
         scenario = load_scenario(sc_path)
-        # Apply global peaks limit if provided
-        if args.N is not None and args.N > 0:
-            scenario["_limit_peaks_n"] = int(args.N)
         print(f"Running scenario: {sc_path.name}")
-        run_dir, metadata, conversation = run_single_scenario(scenario, cfg)
-        evaluate_run(run_dir, metadata, conversation, cfg)
-        render_report(run_dir)
-        print(f"Completed. Outputs: {run_dir}")
+        # If peaks.pkl is a dataset (list of observations), --N controls how many to run
+        n_obs = int(args.N) if (args.N is not None and args.N > 0) else 1
+        peaks_limit = int(args.peaksN) if (args.peaksN is not None and args.peaksN > 0) else None
+        for obs_index in range(n_obs):
+            run_dir, metadata, conversation = run_single_scenario(
+                scenario,
+                cfg,
+                obs_index=obs_index,
+                peaks_limit=peaks_limit,
+            )
+            evaluate_run(run_dir, metadata, conversation, cfg)
+            render_report(run_dir)
+            print(f"Completed obs #{obs_index}. Outputs: {run_dir}")
 
 
 if __name__ == "__main__":

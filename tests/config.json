@@ -8,6 +8,9 @@
   "dialog": {
     "max_turns": 8
   },
+  "writer": {
+    "timeout_s": 60.0
+  },
   "io": {
     "runs_dir": "tests/runs"
   }

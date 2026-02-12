@@ -1,19 +1,116 @@
 import configparser
-import os
-from writerai import Writer
+from pathlib import Path
 import numpy as np
 from scipy.special import softmax
+import json
+from typing import Any, Dict, Tuple
 
 
-def get_client():    
-    client = Writer(api_key=os.environ.get("WRITER_API_KEY"))
-    return client
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parent
+
+
+def _read_ini(path: Path) -> configparser.ConfigParser:
+    cfg = configparser.ConfigParser()
+    if path.exists():
+        cfg.read(str(path), encoding="utf-8")
+    return cfg
+
+
+def get_secret(variable: str, section: str = "DEFAULT", fallback: str = "") -> str:
+    """
+    Read a secret from `secrets.ini` WITHOUT using environment variables.
+    """
+    try:
+        cfg = _read_ini(_repo_root() / "secrets.ini")
+        if section in cfg and variable in cfg[section]:
+            return str(cfg[section].get(variable, fallback=fallback)).strip()
+        if "DEFAULT" in cfg and variable in cfg["DEFAULT"]:
+            return str(cfg["DEFAULT"].get(variable, fallback=fallback)).strip()
+        return fallback
+    except Exception:
+        return fallback
+
+
+def get_config(variable: str, section: str = "DEFAULT", fallback: str = "") -> str:
+    """
+    Read a config value from `config.ini`.
+    """
+    try:
+        cfg = _read_ini(_repo_root() / "config.ini")
+        if section in cfg and variable in cfg[section]:
+            return str(cfg[section].get(variable, fallback=fallback)).strip()
+        if "DEFAULT" in cfg and variable in cfg["DEFAULT"]:
+            return str(cfg["DEFAULT"].get(variable, fallback=fallback)).strip()
+        return fallback
+    except Exception:
+        return fallback
 
 
 def get_settings(section='DEFAULT', variable='SYSTEM_PROMPT'):
     config = configparser.ConfigParser()
-    config.read('./config.ini', encoding="utf-8")
+    config.read(str(_repo_root() / "config.ini"), encoding="utf-8")
     return config[section][variable]
+
+
+def normalize_observation(observation: Any) -> Tuple[Dict[str, Any], float]:
+    """
+    Accepts different observation formats and returns:
+      - a dict suitable for preprocess_obs() (expects {"peaks": [{"x": int}, ...]})
+      - sampling rate fs (float)
+
+    Supported formats:
+      - dict with {"peaks": [{"x":...}, ...]} or {"peaks": [int, ...]}
+      - dict like a record from resp_example/heart_rate_first10_responses.json:
+          {"sampling_rate": 99, "response": {"base_peaks":[...], ...}, ...}
+      - dict like response payload:
+          {"base_peaks":[...], "bpm":..., ...} (+ optional sampling_rate on outer object)
+      - JSON string of any of the above
+    """
+    # If string -> try JSON
+    if isinstance(observation, str):
+        s = observation.strip()
+        if s.startswith("{") or s.startswith("["):
+            observation = json.loads(s)
+
+    if not isinstance(observation, dict):
+        raise TypeError(f"observation must be dict or JSON string, got: {type(observation).__name__}")
+
+    fs = float(observation.get("sampling_rate", observation.get("fs", 100.0)) or 100.0)
+
+    # heart_rate_first10_responses.json-style wrapper
+    if "response" in observation and isinstance(observation["response"], dict):
+        resp = observation["response"]
+        base_peaks = resp.get("base_peaks")
+        if isinstance(base_peaks, list) and (not base_peaks or isinstance(base_peaks[0], int)):
+            peaks = [{"x": int(p)} for p in base_peaks]
+            out: Dict[str, Any] = {"peaks": peaks}
+            for k in ("bpm", "confidence", "quality_score", "is_noisy", "error"):
+                if k in resp:
+                    out[k] = resp.get(k)
+            return out, fs
+
+    # direct response payload
+    if "base_peaks" in observation and isinstance(observation["base_peaks"], list):
+        base_peaks = observation["base_peaks"]
+        peaks = [{"x": int(p)} for p in base_peaks]
+        out = {"peaks": peaks}
+        for k in ("bpm", "confidence", "quality_score", "is_noisy", "error"):
+            if k in observation:
+                out[k] = observation.get(k)
+        return out, fs
+
+    # already in preprocess_obs format (peaks list)
+    if "peaks" in observation and isinstance(observation["peaks"], list):
+        peaks_list = observation["peaks"]
+        if not peaks_list:
+            return {"peaks": []}, fs
+        if isinstance(peaks_list[0], int):
+            return {"peaks": [{"x": int(p)} for p in peaks_list]}, fs
+        if isinstance(peaks_list[0], dict) and "x" in peaks_list[0]:
+            return {"peaks": [{"x": int(p["x"])} for p in peaks_list]}, fs
+
+    raise ValueError("Unsupported observation format: missing peaks/base_peaks/response.base_peaks")
     
 
 def sec2hms(sec: float) -> str:

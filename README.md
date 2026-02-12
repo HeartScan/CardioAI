@@ -1,7 +1,7 @@
 # CardioAI
 
 Веб-приложение-чат-бот для первичного анализа записи сердечного ритма (SCG / ECG).  
-**Бэкенд** — FastAPI, **LLM-клиент** — WriterAI, **фронтенд** — React + Vite.
+**Бэкенд** — FastAPI, **LLM-клиент** — HuggingFace Inference Endpoint (OpenAI-compatible, med-gemma), **фронтенд** — React + Vite.
 
 ---
 
@@ -37,16 +37,13 @@ cardioai/
 
 ---
 
-## 3 . Переменные окружения
+## 3 . Настройки (config.ini + secrets.ini)
 
-Создайте файл **`.env`** в корневой директории:
-
-```dotenv
-WRITER_API_KEY="YOUR_WRITER_KEY"
-```
-
-Файл автоматически загружается библиотекой `python-dotenv` или
-передаётся Uvicorn через `--env-file`.
+- В `config.ini` задаётся endpoint:
+  - `[HF] BASE_URL` — базовый URL HuggingFace endpoint (можно без `/v1`)
+  - `[HF] MODEL` — имя модели (например `med-gemma`)
+- В `secrets.ini` задаётся токен:
+  - `HF_TOKEN=...`
 
 ---
 
@@ -57,7 +54,7 @@ WRITER_API_KEY="YOUR_WRITER_KEY"
 ```bash
 python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn server:app --reload --env-file .env          # http://localhost:8000
+uvicorn server:app --reload                          # http://localhost:8000
 ```
 
 ### 4 .2 Frontend

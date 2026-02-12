@@ -1,7 +1,7 @@
 # CardioAI Product Test Harness (tests/)
 
 Автономная система продуктового тестирования для демонстрации связки:
-- Кардиолог — Writer Palmyra (через существующий `WriterChatSession` и `config.ini`);
+- Кардиолог — HF med-gemma (OpenAI-compatible endpoint, через `WriterChatSession`, `config.ini` + `secrets.ini`);
 - Пациент — ChatGPT (OpenAI Chat Completions API);
 - Критик — ChatGPT (оценка по рубрике).
 
@@ -17,9 +17,12 @@ pip install -r requirements.txt
 2) Переменные окружения:
 - В корне `.env` или в `tests/.env` укажите:
 ```dotenv
-WRITER_API_KEY="YOUR_WRITER_KEY"
+HF_TOKEN="YOUR_HF_TOKEN"
 OPENAI_API_KEY="YOUR_OPENAI_KEY"
 ```
+
+Альтернатива (проще): скопируйте `secrets.ini.example` → `secrets.ini` в корне репозитория и вставьте ключи туда.  
+`tests` автоматически подхватит ключи из `secrets.ini`, если они не заданы через ENV/.env.
 
 ## Запуск
 
@@ -33,11 +36,16 @@ python tests/run.py --all
 python tests/run.py --scenario tests/scenarios/smoker_52f.json
 ```
 
-- Ограничить число пиков из `peaks.pkl` (например, первые 100 для быстрого теста):
+- Прогнать первые N **наблюдений** из `peaks.pkl` (например, первые 100 для быстрого теста):
 ```bash
 python tests/run.py --all --N 100
 # или для одного сценария
 python tests/run.py --scenario tests/scenarios/smoker_52f.json --N 100
+```
+
+- (Опционально) Ограничить число **пиков** внутри каждого наблюдения:
+```bash
+python tests/run.py --all --N 100 --peaksN 200
 ```
 
 - Сгенерировать отчёт повторно (без выполнения):
@@ -49,7 +57,7 @@ python tests/run.py --report tests/runs/<run_folder>
 
 - `tests/run.py` — оркестратор: загрузка сценариев, запуск диалога, оценка, отчёт.
 - `tests/providers/writer_adapter.py` — обёртка Writer на базе существующего `WriterChatSession`, максимально повторяющая прод-пайплайн (системный промпт из `config.ini`, первый ход `SCG data:\n{...}`).
-- `tests/providers/openai_adapter.py` — минимальный клиент OpenAI Chat Completions API на stdlib.
+- `tests/providers/openai_adapter.py` — клиент OpenAI Chat Completions API на официальном OpenAI SDK.
 - `tests/prompts/*.txt` — системные промпты пациента и критика.
 - `tests/scenarios/*.json` — сценарии пациентов (профили и ссылки на `tests/peaks.pkl`).
 - `tests/report/render.py` — генерация `report.md` из JSON-логов.
