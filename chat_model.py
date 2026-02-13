@@ -22,7 +22,7 @@ class ChatSession:
             self.last_error = None
             self._sleep = time.sleep
 
-            hf_token = get_secret("HF_TOKEN")
+            hf_token = get_secret("DR7_API_KEY") or get_secret("HF_TOKEN")
             base_url = get_config("BASE_URL", section="HF")
             hf_model = get_config("MODEL", section="HF", fallback="med-gemma")
             hf_temperature = get_config("TEMPERATURE", section="HF", fallback="0.2")
