@@ -4,14 +4,53 @@ import time
 
 # --- CONFIGURATION ---
 BASE_URL = "https://cardioai-pky1.onrender.com/api" # Your Render URL
-# BASE_URL = "http://localhost:8000/api"           # Local testing
+
+def test_math_api_direct(key):
+    url = "https://heartscan-api-175148683457.us-central1.run.app/api/v1/cardiolog/realtime_analysis"
+    print(f"\n--- Testing Math API directly with key: {key[:10]}... ---")
+    headers = {"X-API-Key": key}
+    # Send enough samples to avoid 400
+    payload = {
+        "az_data_array": [{"ax": 0, "ay": 0, "az": 9.8, "timestamp": i*10} for i in range(110)],
+        "device": {"userAgent": "Test", "platform": "Test"}
+    }
+    try:
+        res = requests.post(url, json=payload, headers=headers, timeout=15)
+        if res.status_code == 200:
+            print(f"✅ Success! Math API key is valid.")
+            return True
+        elif res.status_code == 400:
+            print(f"✅ Success! Math API key is valid (got status 400, but key was accepted).")
+            return True
+        else:
+            print(f"❌ Failed! Status: {res.status_code}, Response: {res.text}")
+            return False
+    except Exception as e:
+        print(f"💥 Error testing key: {e}")
+        return False
 
 def test_full_cycle():
     print("🚀 Starting API Test Cycle...")
+
+    # 0. Validate Keys
+    keys_to_test = [
+        "pm_only_key_d9a8f7b3e1c2", 
+        "AIzaSyCVIULdgoK64ufalJouYeo_04yv-TY1lZ8",
+        "RslGMBekS0iOigLoStuKkQcc4DPiyc9v_yMB0XC4dtI"
+    ]
+    valid_key = None
+    for k in keys_to_test:
+        if test_math_api_direct(k):
+            valid_key = k
+            break
     
-    # 1. Mock Raw Data (Accelerometer-like)
-    # Since we don't have real raw data in files, we'll send a mock array
-    # that your new HeartScan API should be able to process.
+    if not valid_key:
+        print("\n🛑 No valid Math API key found. Stopping test.")
+        return
+
+    print(f"\n💡 Use this key in Render/Vercel ENV: {valid_key}")
+
+    # 1. Mock Raw Data
     mock_raw_data = {
         "az_data_array": [
             {"ax": 0.01, "ay": 0.02, "az": 9.81, "timestamp": i*10} 
@@ -50,10 +89,9 @@ def test_full_cycle():
             
             chat_payload = {
                 "message": user_msg,
-                "history": [] # In this stateless version, we could pass local history
+                "history": [] 
             }
             
-            # Pass session_id as a query param or cookie (server supports both)
             chat_res = requests.post(f"{BASE_URL}/chat?session_id={session_id}", json=chat_payload)
             
             if chat_res.status_code != 200:
