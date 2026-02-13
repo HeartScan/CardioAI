@@ -1,80 +1,76 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import os
-#import logger
-from typing import Any
+import uuid
+from typing import Any, Dict, List, Optional
 
-
-# from pathlib import Path
-# import json
-# from fastapi import Query
-
-
-from controller import Controller
-
+from agent import CardioAgent
 
 app = FastAPI()
+
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"] ,
-    allow_headers=["*"] ,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-controller: Controller
-controller = None
+# In-memory session storage (can be easily replaced with Redis/DB)
+sessions: Dict[str, CardioAgent] = {}
 
 class InitPayload(BaseModel):
     observation: Any
 
 class ChatPayload(BaseModel):
     message: str
-
+    history: Optional[List[Dict[str, str]]] = []
 
 @app.post("/api/init")
-def init_chat(payload: InitPayload):
-    global controller
-    controller = Controller(payload.observation)
+async def init_chat(payload: InitPayload, response: Response):
+    session_id = str(uuid.uuid4())
+    agent = CardioAgent(payload.observation)
+    
+    # Store agent instance in memory
+    sessions[session_id] = agent
+    
+    # Set session cookie
+    response.set_cookie(
+        key="session_id", 
+        value=session_id, 
+        httponly=True, 
+        samesite="none", 
+        secure=True # Required for cross-site cookies
+    )
+    
+    initial_msg = agent.get_initial_response()
+    
     return {
         "status": "initialized",
-        "response": controller.get_init_response(),   # показываем фронту
-        "history": controller.get_history(),          # (опционально)
+        "session_id": session_id,
+        "response": initial_msg
     }
 
-# @app.post("/api/init")
-# def init_chat(payload: InitPayload, idx: int = Query(0, ge=0)):
-#     global controller
-
-#     repo_root = Path(__file__).resolve().parent
-#     examples_path = repo_root / "resp_example" / "heart_rate_first10_responses.json"
-#     records = json.loads(examples_path.read_text(encoding="utf-8"))
-
-#     if not isinstance(records, list) or not records:
-#         raise HTTPException(status_code=500, detail="Examples file is empty or invalid")
-
-#     if idx >= len(records):
-#         raise HTTPException(status_code=400, detail=f"idx out of range: {idx} (len={len(records)})")
-
-#     observation = records[idx]
-#     controller = Controller(observation)
-
-#     return {
-#         "status": "initialized",
-#         "response": controller.get_init_response(),
-#         "history": controller.get_history(),
-#     }
-
-
 @app.post("/api/chat")
-def chat(payload: ChatPayload):
-    if controller is None:
-        raise HTTPException(status_code=400, detail="Session not initialized")
-    response = controller.send_user_message(payload.message)
-    return {"response": response, "history": controller.get_history()}
-
+async def chat(payload: ChatPayload, session_id: Optional[str] = None):
+    # Try to get session from cookie or header (for flexible testing)
+    if not session_id:
+        raise HTTPException(status_code=400, detail="Missing session_id")
+    
+    agent = sessions.get(session_id)
+    if not agent:
+        # If session expired/lost in memory, we could potentially rebuild it 
+        # but for now we throw error. In DB-version we would fetch from DB.
+        raise HTTPException(status_code=400, detail="Session expired or invalid")
+        
+    response = agent.handle_message(payload.message, payload.history)
+    
+    return {
+        "response": response
+    }
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
@@ -83,5 +79,3 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=port
     )
-
-
