@@ -54,7 +54,13 @@ export async function POST(req: Request) {
     • At the end of the response, add a disclaimer: “This advice does not replace a doctor’s visit.”
 
     === LOGIC ===
-    1. If episodes_count == 0:
+    0. If avg_bpm == 0 or data is missing/invalid:
+       a. Inform the user that the measurement data could not be processed effectively.
+       b. Provide the following instructions for a better recording:
+          "Please perform the measurement again. Lie down flat, place the phone in the middle of your chest vertically or under your left breast horizontally, and start the measurement for 60 seconds. During the process, the phone will make sounds like a heart monitor."
+       c. Ask if they are ready to try again.
+
+    1. If episodes_count == 0 (and avg_bpm > 0):
        a. State that no rhythm abnormalities were detected.
        b. Ask: “Would you like general recommendations for maintaining heart health?”
        c. If the user answers “no” → say goodbye.
@@ -88,11 +94,12 @@ export async function POST(req: Request) {
         updatedHistory.push({ role: "system", content: systemPrompt });
       }
 
-      // 3. Add measurement data as a system message to history
-      updatedHistory.push({ 
-        role: "system", 
-        content: `New Measurement Results: ${JSON.stringify(mathData)}` 
-      });
+    // 3. Add measurement data as a system message to history
+    console.log("Math Data received:", mathData);
+    updatedHistory.push({ 
+      role: "system", 
+      content: `User just performed a heart rhythm measurement. Results: ${JSON.stringify(mathData)}` 
+    });
 
       // If no explicit user message with data, add a trigger
       if (!message) {
