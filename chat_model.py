@@ -40,7 +40,7 @@ class ChatSession:
             if not base_url:
                 raise ValueError("HF BASE_URL is not set in config.ini ([HF] BASE_URL)")
             if not hf_token:
-                raise ValueError("HF_TOKEN is not set in secrets.ini")
+                raise ValueError("HF_TOKEN is not set (check Environment Variables or secrets.ini)")
 
             # If caller passed an explicit model_name, prefer it; otherwise use config.
             self.model_name = model_name or hf_model
