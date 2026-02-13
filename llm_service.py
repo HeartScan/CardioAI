@@ -1,6 +1,6 @@
 import requests
 import time
-from utils import get_config, get_secret
+from config_reader import get_config, get_secret
 
 class LLMService:
     """
