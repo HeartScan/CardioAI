@@ -1,0 +1,9 @@
+node_modules/
+.env
+*.pyc
+__pycache__/
+secrets.ini
+dist/
+build/
+.DS_Store
+frontend/node_modules/
