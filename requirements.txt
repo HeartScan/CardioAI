@@ -1,7 +1,5 @@
 fastapi 
 uvicorn
 pydantic
-numpy
-scipy
 requests
 gunicorn
