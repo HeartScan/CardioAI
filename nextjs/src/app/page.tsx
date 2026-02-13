@@ -11,7 +11,16 @@ export default function App() {
   const [history, setHistory] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [dataset, setDataset] = useState<any[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Load dataset on mount
+  useEffect(() => {
+    fetch('/dataset.json')
+      .then(res => res.json())
+      .then(data => setDataset(data))
+      .catch(err => console.error("Failed to load dataset:", err));
+  }, []);
 
   // Auto-scroll
   useEffect(() => {
@@ -24,7 +33,6 @@ export default function App() {
     try {
       setBusy(true);
       
-      // Optimistic update for user messages
       if (userMessage) {
         setHistory(prev => [...prev, { role: "user", content: userMessage }]);
         setMessage("");
@@ -51,6 +59,23 @@ export default function App() {
     }
   }
 
+  const sendRandomMeasurement = () => {
+    if (dataset.length === 0) {
+        alert("Dataset not loaded yet");
+        return;
+    }
+    const randomIndex = Math.floor(Math.random() * dataset.length);
+    const item = dataset[randomIndex];
+    
+    console.log(`Sending measurement from file: ${item.filename}`);
+    
+    const observation = {
+        az_data_array: item.az_data_array,
+        device: { userAgent: navigator.userAgent, platform: navigator.platform }
+    };
+    callApi(null, observation);
+  };
+
   function handleKey(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -61,22 +86,16 @@ export default function App() {
   return (
     <div className="chat-wrapper" style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
       <header style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>
-        CardioAI Chat (Multi-measurement Support)
+        CardioAI Chat (Dataset Demo)
       </header>
 
       <div style={{ marginBottom: '10px', display: 'flex', gap: '10px' }}>
         <button 
-          onClick={() => {
-            const mockData = {
-                az_data_array: Array.from({length: 200}, (_, i) => ({"ax": 0, "ay": 0, "az": 9.8, "timestamp": i*10})),
-                device: { userAgent: "Test", platform: "Test" }
-            };
-            callApi(null, mockData);
-          }}
+          onClick={sendRandomMeasurement}
           style={{ padding: '8px 15px', backgroundColor: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-          disabled={busy}
+          disabled={busy || dataset.length === 0}
         >
-          ➕ Add New Measurement Data
+          🎲 Send Random Real Measurement ({dataset.length} available)
         </button>
         
         <button 
@@ -91,7 +110,7 @@ export default function App() {
       <div className="chat-window" style={{ height: '500px', overflowY: 'auto', border: '1px solid #ccc', padding: '10px', marginBottom: '20px', backgroundColor: '#fff' }}>
         {history.length === 0 && (
             <div style={{ color: '#888', textAlign: 'center', marginTop: '100px' }}>
-                No conversation yet. Add measurement data to start!
+                No conversation yet. Click the green button to send real clinical data!
             </div>
         )}
         {history

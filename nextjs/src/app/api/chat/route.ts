@@ -5,6 +5,9 @@ export async function POST(req: Request) {
   try {
     const { message, history, observation } = await req.json();
     
+    // Filter out any previous system messages from history to avoid duplicates
+    const cleanHistory = (history || []).filter((m: any) => m.role !== 'system');
+    
     // We only keep the 'visible' conversation history (user and assistant messages)
     // and inject the secret system prompt and measurement data every time at the top.
     let fullMessages = [{ role: "system", content: SYSTEM_PROMPT }];
@@ -26,6 +29,20 @@ export async function POST(req: Request) {
 
       const mathData = await mathRes.json();
       console.log("Math Data received:", mathData);
+
+      // Validation logic: if math data is invalid, return instructions without calling LLM
+      if (!mathData.avg_bpm || mathData.avg_bpm === 0) {
+        const errorMsg = "Данные не смогли обработать, пожалуйста проведите измерени еще раз. Ляжте ровно, положите телефон посередине грудной клетки вертикально или под левой грудью горизонтально и запустите измерения на 60 секунд. В процессе измерения телефон будет издавать звуки как сердечный монитор.";
+        
+        const newHistory = [...cleanHistory];
+        if (message) newHistory.push({ role: "user", content: message });
+        newHistory.push({ role: "assistant", content: errorMsg });
+
+        return NextResponse.json({
+          response: errorMsg,
+          history: newHistory
+        });
+      }
       
       // Inject measurement data as system context
       fullMessages.push({ 
@@ -34,9 +51,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // Filter out any previous system messages from history to avoid duplicates
-    const cleanHistory = history.filter((m: any) => m.role !== 'system');
-    
     // Add the conversation history
     fullMessages = [...fullMessages, ...cleanHistory];
 
