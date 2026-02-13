@@ -1,4 +1,5 @@
 import configparser
+import os
 from pathlib import Path
 import numpy as np
 from scipy.special import softmax
@@ -19,8 +20,14 @@ def _read_ini(path: Path) -> configparser.ConfigParser:
 
 def get_secret(variable: str, section: str = "DEFAULT", fallback: str = "") -> str:
     """
-    Read a secret from `secrets.ini` WITHOUT using environment variables.
+    Read a secret from environment variables first, then fallback to `secrets.ini`.
     """
+    # 1. Try environment variable
+    env_val = os.environ.get(variable)
+    if env_val:
+        return env_val.strip()
+
+    # 2. Try secrets.ini
     try:
         cfg = _read_ini(_repo_root() / "secrets.ini")
         if section in cfg and variable in cfg[section]:

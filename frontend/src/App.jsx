@@ -19,9 +19,9 @@ export default function App() {
     async function initChat() {
       try {
         setBusy(true);
-        const res = await fetch("/api/init", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+      const res = await fetch("https://cardioai-pky1.onrender.com/api/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             // TODO: если нужно — подставьте реальные данные наблюдения
             observation: {
@@ -76,7 +76,7 @@ export default function App() {
       setHistory((h) => [...h, { role: "user", text: message }]);
       setMessage("");
 
-      const res = await fetch("/api/chat", {
+      const res = await fetch("https://cardioai-pky1.onrender.com/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message }),
