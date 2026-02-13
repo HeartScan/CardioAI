@@ -4,3 +4,4 @@ pydantic
 numpy
 scipy
 openai>=1.0.0
+gunicorn
