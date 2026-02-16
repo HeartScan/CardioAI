@@ -2,8 +2,6 @@
 
 /**
  * IMPORTANT: THIS COMPONENT MUST ONLY USE REAL DEVICE DATA
- *
- * SIMULATION CODE IS STRICTLY FORBIDDEN
  */
 import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {Heart, Activity, CheckCircle, AlertCircle} from 'lucide-react';
@@ -12,6 +10,7 @@ import Image from "next/image"
 import {useIsMobile} from "@/components/ui/use-mobile"
 import {useAnalytics} from "@/lib/analytics/AnalyticsProvider"
 import {AccelerometerDataPoint} from "@/app/service/apiService";
+import {useMotionSensor} from "@/hooks/useMotionSensor";
 
 export interface HeartRateMeasurementProps {
     onComplete?: (heartRate: number, rawData?: AccelerometerDataPoint[]) => void;
@@ -35,7 +34,7 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
     const isMobile = useIsMobile();
     // State variables
     const [stage, setStage] = useState<'ready' | 'countdown' | 'measuring' | 'complete' | 'error'>('ready');
-    const stageRef = useRef(stage); // Ref to track stage for callbacks
+    const stageRef = useRef(stage); 
     useEffect(() => {
         stageRef.current = stage;
     }, [stage]);
@@ -45,7 +44,6 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
     const [measurementProgress, setMeasurementProgress] = useState(0);
     const [errorMessage, setErrorMessage] = useState('');
     const [chartData, setChartData] = useState<number[]>([]);
-    const [imageLoaded, setImageLoaded] = useState(false);
 
     // Refs for measurement data
     const dataBufferRef = useRef<AccelerometerDataPoint[]>([]);
@@ -89,8 +87,8 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
             oscillator.type = 'sine';
             oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
 
-            // ANALYTIC ENVELOPE: Soft attack to prevent triggering device haptics/vibration
-            const attackTime = 0.02; // 20ms fade-in
+            // ANALYTIC ENVELOPE
+            const attackTime = 0.02;
             gainNode.gain.setValueAtTime(0.001, ctx.currentTime);
             gainNode.gain.linearRampToValueAtTime(0.2, ctx.currentTime + attackTime);
             gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
@@ -185,26 +183,6 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
         }, durationMs);
     };
 
-    const beginCountdown = () => {
-        if (onStart) onStart();
-        setStage('countdown');
-        setCountdown(3);
-        setIsCounting(true);
-    };
-
-    useEffect(() => {
-        if (imageLoaded && isCounting && countdown > 0) {
-            countdownTimerRef.current = setTimeout(() => {
-                setCountdown(prev => prev - 1);
-                playBeep(800, 0.1);
-            }, 1000);
-        } else if (isCounting && countdown === 0) {
-            setIsCounting(false);
-            startMeasurement();
-        }
-        return () => { if (countdownTimerRef.current) clearTimeout(countdownTimerRef.current); };
-    }, [imageLoaded, countdown, isCounting]);
-
     const detectPeaks = useCallback((currentValue: number, currentTime: number) => {
         const noSearchFlagDuration = 400; 
         zValuesRef.current.push(currentValue);
@@ -275,15 +253,42 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
         if (dataBufferRef.current.length > 2000) dataBufferRef.current.shift();
     }, [detectPeaks]);
 
+    const { requestPermission } = useMotionSensor(handleDeviceMotion);
+
+    const beginCountdown = async () => {
+        // Explicitly request permission
+        const granted = await requestPermission();
+        if (!granted) {
+            alert("Motion sensor permission is required.");
+            return;
+        }
+
+        if (onStart) onStart();
+        setStage('countdown');
+        setCountdown(3);
+        setIsCounting(true);
+    };
+
     useEffect(() => {
-        window.addEventListener('devicemotion', handleDeviceMotion);
+        if (isCounting && countdown > 0) {
+            countdownTimerRef.current = setTimeout(() => {
+                setCountdown(prev => prev - 1);
+                playBeep(800, 0.1);
+            }, 1000);
+        } else if (isCounting && countdown === 0) {
+            setIsCounting(false);
+            startMeasurement();
+        }
+        return () => { if (countdownTimerRef.current) clearTimeout(countdownTimerRef.current); };
+    }, [countdown, isCounting]);
+
+    useEffect(() => {
         return () => {
-            window.removeEventListener('devicemotion', handleDeviceMotion);
             if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
                 audioContextRef.current.close().catch(console.error);
             }
         };
-    }, [handleDeviceMotion]);
+    }, []);
 
     return (
         <div className={`flex flex-col items-center justify-center w-full max-w-lg mx-auto rounded-xl p-6 ${className}`}>
@@ -300,7 +305,7 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
             )}
             {stage === 'countdown' && (
                 <div className="relative flex flex-col items-center justify-center py-12">
-                    <Image src="/images/boy.webp" alt="" width={300} height={300} className="absolute opacity-10" onLoadingComplete={() => setImageLoaded(true)} />
+                    <Image src="/images/boy.webp" alt="" width={300} height={300} className="absolute opacity-10" />
                     <p className="text-lg font-bold text-slate-400 mb-6 z-10 uppercase tracking-widest">Get Ready</p>
                     <div className="text-8xl font-black text-blue-600 mb-4 z-10 tabular-nums">{countdown}</div>
                     <p className="text-slate-500 z-10 font-medium">Position phone now</p>
