@@ -44,7 +44,6 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
     const [measurementProgress, setMeasurementProgress] = useState(0);
     const [errorMessage, setErrorMessage] = useState('');
     const [chartData, setChartData] = useState<number[]>([]);
-    const [imageLoaded, setImageLoaded] = useState(false);
 
     // Refs for measurement data
     const dataBufferRef = useRef<AccelerometerDataPoint[]>([]);
@@ -271,7 +270,7 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
     };
 
     useEffect(() => {
-        if (imageLoaded && isCounting && countdown > 0) {
+        if (isCounting && countdown > 0) {
             countdownTimerRef.current = setTimeout(() => {
                 setCountdown(prev => prev - 1);
                 playBeep(800, 0.1);
@@ -281,7 +280,7 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
             startMeasurement();
         }
         return () => { if (countdownTimerRef.current) clearTimeout(countdownTimerRef.current); };
-    }, [imageLoaded, countdown, isCounting]);
+    }, [countdown, isCounting]);
 
     useEffect(() => {
         return () => {
@@ -294,21 +293,30 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
     return (
         <div className={`flex flex-col items-center justify-center w-full max-w-lg mx-auto rounded-xl p-6 ${className}`}>
             {stage === 'ready' && (
-                <div className="flex flex-col items-center space-y-6 text-center">
-                    <div className="relative w-48 h-48 mb-4">
+                <div className="flex flex-col items-center space-y-6 text-center w-full max-w-sm mx-auto">
+                    <div className="relative w-full aspect-square max-h-[300px] mb-2 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 overflow-hidden group">
                         <Image 
                             src="/images/boy.webp" 
-                            alt="Position phone on chest" 
+                            alt="Instruction: Place phone vertically in middle of chest or horizontally under left breast" 
                             fill
-                            className="object-contain opacity-40"
-                            onLoadingComplete={() => setImageLoaded(true)}
+                            className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
                             priority
                         />
-                        <Heart className="absolute inset-0 w-16 h-16 m-auto text-red-500 animate-pulse opacity-80"/>
+                        <div className="absolute inset-0 bg-gradient-to-t from-white/20 to-transparent pointer-events-none" />
+                        <div className="absolute top-4 right-4 flex gap-2">
+                             <div className="w-10 h-10 bg-white/90 backdrop-blur shadow-sm rounded-full flex items-center justify-center">
+                                <Activity className="w-5 h-5 text-blue-600" />
+                             </div>
+                        </div>
+                        <Heart className="absolute bottom-6 left-1/2 -translate-x-1/2 w-12 h-12 text-red-500 animate-pulse drop-shadow-lg"/>
                     </div>
-            <h3 className="text-xl font-bold text-slate-800 tracking-tight">Clinical Heart Measurement</h3>
-            <p className="text-slate-500 mb-4">Place your phone firmly on your chest as shown above to measure heart vibrations.</p>
-            <Button onClick={() => { playBeep(1, 0.001); if (isMobile) beginCountdown(); else if (onDesktopClick) onDesktopClick(); }} size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-14 rounded-xl shadow-md shadow-blue-100">Start 60s Session</Button>
+            <div className="space-y-2">
+                <h3 className="text-xl font-bold text-slate-800 tracking-tight">Clinical Capture Instruction</h3>
+                <p className="text-sm text-slate-500 leading-relaxed px-2">
+                    Place your phone firmly on your chest as shown above. Lie down flat for 60 seconds during measurement.
+                </p>
+            </div>
+            <Button onClick={() => { playBeep(1, 0.001); if (isMobile) beginCountdown(); else if (onDesktopClick) onDesktopClick(); }} size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-16 text-lg rounded-2xl shadow-xl shadow-blue-100 transition-all active:scale-[0.98]">Start 60s Session</Button>
         </div>
             )}
             {stage === 'countdown' && (
