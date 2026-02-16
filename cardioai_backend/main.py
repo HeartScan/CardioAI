@@ -145,7 +145,7 @@ async def chat(request: ChatRequest):
                 math_data = math_res.json()
 
                 if not math_data.get('avg_bpm') or math_data.get('avg_bpm') == 0:
-                    error_msg = "Данные не смогли обработать, пожалуйста проведите измерени еще раз. Ляжте ровно, положите телефон посередине грудной клетки вертикально или под левой грудью горизонтально и запустите измерения на 60 секунд. В процессе измерения телефон будет издавать звуки как сердечный монитор."
+                    error_msg = "Data could not be processed. Please perform the measurement again. Lie down flat, place the phone in the middle of your chest vertically or under your left breast horizontally, and start the measurement for 60 seconds. During the process, the phone will make sounds like a heart monitor."
                     
                     new_history = list(clean_history)
                     if request.message:
