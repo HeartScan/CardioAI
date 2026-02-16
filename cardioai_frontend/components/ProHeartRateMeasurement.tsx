@@ -44,6 +44,7 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
     const [measurementProgress, setMeasurementProgress] = useState(0);
     const [errorMessage, setErrorMessage] = useState('');
     const [chartData, setChartData] = useState<number[]>([]);
+    const [imageLoaded, setImageLoaded] = useState(false);
 
     // Refs for measurement data
     const dataBufferRef = useRef<AccelerometerDataPoint[]>([]);
@@ -270,7 +271,7 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
     };
 
     useEffect(() => {
-        if (isCounting && countdown > 0) {
+        if (imageLoaded && isCounting && countdown > 0) {
             countdownTimerRef.current = setTimeout(() => {
                 setCountdown(prev => prev - 1);
                 playBeep(800, 0.1);
@@ -280,7 +281,7 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
             startMeasurement();
         }
         return () => { if (countdownTimerRef.current) clearTimeout(countdownTimerRef.current); };
-    }, [countdown, isCounting]);
+    }, [imageLoaded, countdown, isCounting]);
 
     useEffect(() => {
         return () => {
@@ -294,12 +295,19 @@ const ProHeartRateMeasurement: React.FC<HeartRateMeasurementProps> = (
         <div className={`flex flex-col items-center justify-center w-full max-w-lg mx-auto rounded-xl p-6 ${className}`}>
             {stage === 'ready' && (
                 <div className="flex flex-col items-center space-y-6 text-center">
-                    <div className="relative w-24 h-24 mb-4">
-                        <Heart className="w-24 h-24 text-red-500 animate-pulse"/>
-                        <Activity className="absolute inset-0 w-12 h-12 m-auto text-blue-600"/>
+                    <div className="relative w-48 h-48 mb-4">
+                        <Image 
+                            src="/images/boy.webp" 
+                            alt="Position phone on chest" 
+                            fill
+                            className="object-contain opacity-40"
+                            onLoadingComplete={() => setImageLoaded(true)}
+                            priority
+                        />
+                        <Heart className="absolute inset-0 w-16 h-16 m-auto text-red-500 animate-pulse opacity-80"/>
                     </div>
             <h3 className="text-xl font-bold text-slate-800 tracking-tight">Clinical Heart Measurement</h3>
-            <p className="text-slate-500 mb-4">Place your phone firmly on your chest to measure heart vibrations for AI analysis.</p>
+            <p className="text-slate-500 mb-4">Place your phone firmly on your chest as shown above to measure heart vibrations.</p>
             <Button onClick={() => { playBeep(1, 0.001); if (isMobile) beginCountdown(); else if (onDesktopClick) onDesktopClick(); }} size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-14 rounded-xl shadow-md shadow-blue-100">Start 60s Session</Button>
         </div>
             )}

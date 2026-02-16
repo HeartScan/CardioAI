@@ -157,7 +157,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-[#F8FAFC] font-sans text-slate-900 overflow-hidden pt-[env(safe-area-inset-top)]">
+    <div className="flex flex-col h-[100dvh] bg-[#F8FAFC] font-sans text-slate-900 overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between px-4 md:px-8 py-4 bg-white border-b border-slate-200 shadow-sm shrink-0 z-30">
         <div className="flex items-center gap-3">
