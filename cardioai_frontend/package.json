@@ -1,0 +1,44 @@
+{
+  "name": "my-v0-project",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev-https": "node server.js",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "verify-app-ads": "node scripts/verify-app-ads.js"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.4",
+    "@radix-ui/react-label": "^2.1.1",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-toast": "^1.2.4",
+    "@types/node": "^20.17.28",
+    "@types/react": "^19.2.9",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.21",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.0.0",
+    "embla-carousel-react": "8.5.1",
+    "lucide-react": "^0.479.0",
+    "next": "^16.1.4",
+    "next-themes": "^0.4.6",
+    "postcss": "^8.5.3",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "recharts": "2.15.0",
+    "sonner": "^1.7.1",
+    "tailwind-merge": "^2.1.0",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.8.2",
+    "vaul": "^1.0.0"
+  },
+  "devDependencies": {
+    "@next/bundle-analyzer": "^15.2.4",
+    "eslint": "^8.55.0",
+    "eslint-config-next": "14.0.4"
+  }
+}
