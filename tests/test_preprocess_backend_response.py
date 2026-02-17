@@ -27,7 +27,7 @@ class TestBackendResponsePreprocessing(unittest.TestCase):
         self.assertIn("base_peaks", record0["response"])
 
         # Import here so this test is independent from server/controller/LLM
-        from utils import normalize_observation, preprocess_obs  # type: ignore
+        from cardioai_backend.scg.processing import normalize_observation, preprocess_obs  # type: ignore
 
         obs_norm, fs = normalize_observation(record0)
         self.assertAlmostEqual(fs, float(record0["sampling_rate"]), places=6)

@@ -1,8 +1,8 @@
 import json
 from typing import Any, Dict, List, Optional
 
-from chat_model import ChatSession  # type: ignore
-from utils import get_settings  # type: ignore
+from cardioai_backend.llm.chat_session import ChatSession  # type: ignore
+from cardioai_backend.prompts import get_system_prompt  # type: ignore
 
 
 class WriterCardioAdapter:
@@ -14,14 +14,11 @@ class WriterCardioAdapter:
     """
 
     def __init__(self, system_prompt: Optional[str] = None, model_name: Optional[str] = None, timeout_s: Optional[float] = None) -> None:
-        self.system_prompt = system_prompt or get_settings(section="DEFAULT", variable="SYSTEM_PROMPT")
-        # WriterChatSession now defaults to HF model from config.ini ([HF] MODEL).
-        if model_name:
-            self.session = ChatSession(system_prompt=self.system_prompt, model_name=model_name, timeout_s=timeout_s)
-            self.model_name = model_name
-        else:
-            self.session = ChatSession(system_prompt=self.system_prompt, timeout_s=timeout_s)
-            self.model_name = "med-gemma"
+        # model_name/timeout_s kept for backward compatibility of the harness CLI;
+        # backend LLM settings are read from cardioai_backend/config.ini.
+        self.system_prompt = system_prompt or get_system_prompt()
+        self.session = ChatSession(system_prompt=self.system_prompt)
+        self.model_name = model_name or "dr7"
 
     def init_with_metrics(self, metrics: Dict[str, Any]) -> Optional[str]:
         payload = f"SCG data:\n{json.dumps(metrics, ensure_ascii=False)}"

@@ -14,7 +14,7 @@ TESTS_ROOT = Path(__file__).resolve().parent
 sys.path.append(str(REPO_ROOT))
 
 # Reuse existing pipeline parts
-from utils import preprocess_obs  # type: ignore
+from cardioai_backend.scg.processing import preprocess_obs  # type: ignore
 
 # Local adapters
 from tests.providers.writer_adapter import WriterCardioAdapter  # type: ignore

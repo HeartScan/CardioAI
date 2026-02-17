@@ -9,7 +9,7 @@ def main() -> None:
     # Legacy file name kept; now tests HuggingFace OpenAI-compatible endpoint connectivity.
     # Secrets/config are loaded from secrets.ini/config.ini via utils helpers.
     from openai import OpenAI  # type: ignore
-    from utils import get_config, get_secret
+    from cardioai_backend.config import get_config, get_secret
 
     t0 = time.time()
     base_url = get_config("BASE_URL", section="HF")

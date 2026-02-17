@@ -1,7 +1,7 @@
 # CardioAI Product Test Harness (tests/)
 
 Автономная система продуктового тестирования для демонстрации связки:
-- Кардиолог — HF med-gemma (OpenAI-compatible endpoint, через `WriterChatSession`, `config.ini` + `secrets.ini`);
+- Кардиолог — Dr7 (медицинская LLM, настройки в `cardioai_backend/config.ini`, ключи через ENV или `cardioai_backend/secrets.ini`);
 - Пациент — ChatGPT (OpenAI Chat Completions API);
 - Критик — ChatGPT (оценка по рубрике).
 
@@ -17,12 +17,12 @@ pip install -r requirements.txt
 2) Переменные окружения:
 - В корне `.env` или в `tests/.env` укажите:
 ```dotenv
-HF_TOKEN="YOUR_HF_TOKEN"
+DR7_API_KEY="YOUR_DR7_KEY"
 OPENAI_API_KEY="YOUR_OPENAI_KEY"
 ```
 
-Альтернатива (проще): скопируйте `secrets.ini.example` → `secrets.ini` в корне репозитория и вставьте ключи туда.  
-`tests` автоматически подхватит ключи из `secrets.ini`, если они не заданы через ENV/.env.
+Альтернатива (проще): скопируйте `cardioai_backend/secrets.ini.example` → `cardioai_backend/secrets.ini` и вставьте ключи туда.  
+Хелперы `cardioai_backend/config.py` подхватывают секреты из ENV, затем из `cardioai_backend/secrets.ini` (и, для совместимости, из `secrets.ini` в корне, если он существует).
 
 ## Запуск
 
@@ -56,7 +56,7 @@ python tests/run.py --report tests/runs/<run_folder>
 ## Структура
 
 - `tests/run.py` — оркестратор: загрузка сценариев, запуск диалога, оценка, отчёт.
-- `tests/providers/writer_adapter.py` — обёртка Writer на базе существующего `WriterChatSession`, максимально повторяющая прод-пайплайн (системный промпт из `config.ini`, первый ход `SCG data:\n{...}`).
+- `tests/providers/writer_adapter.py` — обёртка для LLM, повторяющая пайплайн: системный промпт из `cardioai_backend/config.ini`, первый ход `SCG data:\n{...}`.
 - `tests/providers/openai_adapter.py` — клиент OpenAI Chat Completions API на официальном OpenAI SDK.
 - `tests/prompts/*.txt` — системные промпты пациента и критика.
 - `tests/scenarios/*.json` — сценарии пациентов (профили и ссылки на `tests/peaks.pkl`).

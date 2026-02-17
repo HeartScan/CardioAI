@@ -24,6 +24,16 @@ To run the application, you need to configure environment variables. Each folder
 | `DR7_API_KEY` | API key for Dr7.ai to access the medical LLM. |
 | `PORT` | Port on which the server will run (default is 8000). |
 
+### Backend config (`cardioai_backend/config.ini`)
+
+- The **system prompt** is stored in `cardioai_backend/config.ini` (`[DEFAULT] SYSTEM_PROMPT`).
+- Dr7/HeartScan endpoints and LLM parameters are also configurable there.
+
+### Secrets (local dev)
+
+- Preferred: set `HEARTSCAN_API_KEY` / `DR7_API_KEY` via environment variables.
+- Alternative: copy `cardioai_backend/secrets.ini.example` → `cardioai_backend/secrets.ini` and put keys there (the file is ignored by git).
+
 ### ⚛️ Frontend (`cardioai_frontend/.env`)
 | Variable | Description |
 | :--- | :--- |
@@ -57,7 +67,7 @@ npm run dev
 1. Create a new **Web Service** on Render.com.
 2. Specify the Root Directory: `cardioai_backend`.
 3. Build Command: `pip install -r requirements.txt`.
-4. Start Command: `python main.py`.
+4. Start Command: `python main.py` (or `python -m cardioai_backend.main`).
 5. Add the API keys in the **Environment Variables** section.
 
 ### Frontend (Vercel)

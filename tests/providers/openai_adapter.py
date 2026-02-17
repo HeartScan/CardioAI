@@ -4,7 +4,7 @@ from openai import OpenAI  # type: ignore
 import os
 import time
 
-from utils import get_secret  # type: ignore
+from cardioai_backend.config import get_secret  # type: ignore
 
 import json
 from pathlib import Path
