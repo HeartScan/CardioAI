@@ -64,9 +64,9 @@ npm run dev
 
 ### Backend (Render)
 1. Create a new **Web Service** on Render.com.
-2. Specify the Root Directory: `cardioai_backend`.
-3. Build Command: `pip install -r requirements.txt`.
-4. Start Command: `python main.py` (or `python -m cardioai_backend.main`).
+2. Root Directory: (leave empty, or set to the repository root).
+3. Build Command: `pip install -r cardioai_backend/requirements.txt`.
+4. Start Command: `python -m cardioai_backend.main`.
 5. Add the API keys in the **Environment Variables** section.
 
 ### Frontend (Vercel)
