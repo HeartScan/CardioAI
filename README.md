@@ -6,7 +6,7 @@
   <p>
     <a href="#-key-features">Key Features</a> •
     <a href="#-tech-stack">Tech Stack</a> •
-    <a href="#-live-demo">Live Demo</a> •
+    <a href="#-interface">Interface</a> •
     <a href="#-getting-started">Getting Started</a> •
     <a href="#-project-structure">Project Structure</a>
   </p>
@@ -14,11 +14,19 @@
 
 ---
 
+<div align="center">
+  <img src="images/interface.png" alt="CardioAI Interface" width="800"/>
+</div>
+
 **CardioAI** is a groundbreaking web application designed for a Google competition, demonstrating how AI can make primary cardiac diagnostics more accessible. By leveraging the built-in accelerometers in modern smartphones, CardioAI captures and analyzes seismocardiograms (SCG) — the subtle chest vibrations created by the heart's mechanical functions. This provides a non-invasive, cost-effective, and readily available method for preliminary heart rhythm assessment.
 
 Our system combines a sophisticated **FastAPI** backend for AI orchestration with a responsive, mobile-first **Next.js** frontend, delivering a seamless experience for both clinicians and patients.
 
 ## ✨ Key Features
+
+<div align="center">
+  <img src="images/lowres_mode.png" alt="Signal Navigation" width="800"/>
+</div>
 
 - **AI-Powered Chat:** An intuitive chat interface where clinicians can upload measurement data and receive instant analysis and insights from a medical Large Language Model (LLM).
 - **Real-Time Data Capture:** Perform live SCG measurements directly in the browser using the smartphone's accelerometer.
@@ -27,6 +35,11 @@ Our system combines a sophisticated **FastAPI** backend for AI orchestration wit
   - **Full-Screen Interactive Viewer:** A powerful, full-screen modal for detailed signal analysis.
   - **Dual-Mode Display:** Switch between **Standard View** (a zoomed-in chart with a full-signal overview for navigation) and **Split View** (three sequential charts for in-depth analysis of different signal segments).
   - **Mobile-First & Touch-Friendly:** The entire visualization interface is optimized for mobile devices, with large touch targets and intuitive gesture-based navigation (drag, resize, and zoom).
+
+<div align="center">
+  <img src="images/full_chart.png" alt="Full Signal Analysis" width="800"/>
+</div>
+
 - **Seamless Backend Integration:** The frontend communicates with a powerful backend that orchestrates calls to specialized signal analysis APIs and medical LLMs.
 
 ## 🛠️ Tech Stack
@@ -38,13 +51,9 @@ Our system combines a sophisticated **FastAPI** backend for AI orchestration wit
 | | [**uPlot**](https://github.com/leeoniya/uPlot) | A fast, memory-efficient, and powerful charting library for signal visualization. |
 | | [**shadcn/ui**](https://ui.shadcn.com/) & [**Radix**](https://www.radix-ui.com/) | For accessible, unstyled UI components (Dialogs, Buttons). |
 | | [**Lucide React**](https://lucide.dev/) | For consistent and beautiful icons. |
-| **Backend** | [**FastAPI**](https://fastapi.tiangolo.com/) | High-performance Python framework for building APIs. |
+| **Backend** | [**FastAPI**](https://api.tiangolo.com/) | High-performance Python framework for building APIs. |
 | | **Dr7.ai & HeartScan API** | Specialized APIs for medical LLM insights and SCG signal processing. |
 | **Deployment**| [**Vercel**](https://vercel.com/) & [**Render**](https://render.com/) | For seamless, scalable deployment of frontend and backend. |
-
-## 🚀 Live Demo
-
-[Link to your live Vercel/Render deployment]
 
 ## 🏁 Getting Started
 
