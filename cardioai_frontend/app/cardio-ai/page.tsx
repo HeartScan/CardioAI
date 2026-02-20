@@ -7,10 +7,14 @@ import MobileOnlyError from "@/components/MobileOnlyError";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Activity, Send, Trash2, Menu, X, ChevronRight } from "lucide-react";
+import { Activity, Send, Trash2, Menu, X, ChevronRight, History, BarChart3 } from "lucide-react";
+import { storage, MeasurementEntry } from "@/lib/utils/storage";
+import MeasurementHistory from "@/components/MeasurementHistory";
+import SignalViewer from "@/components/SignalViewer";
 
 // Dynamically import the measurement component to avoid SSR issues
 const ProHeartRateMeasurement = dynamic(() => import('@/components/ProHeartRateMeasurement'), {
@@ -40,7 +44,9 @@ export default function App() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [activeFile, setActiveFile] = useState<string | null>(null);
+  const [activeMeasurement, setActiveMeasurement] = useState<MeasurementEntry | null>(null);
   const [isMeasurementOpen, setIsMeasurementOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [showDeviceError, setShowDeviceError] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -106,6 +112,28 @@ export default function App() {
     }
 
     setActiveFile(sourceName);
+
+    // Save to local storage
+    const newEntry: MeasurementEntry = {
+      id: Math.random().toString(36).substring(7),
+      timestamp: new Date().toISOString(),
+      source: sourceName,
+      data: rawData
+    };
+    // Convert to chart format [time[], signal[]] for local storage
+    const chartData = [
+      rawData.map((d: any) => d.timestamp),
+      rawData.map((d: any) => d.az)
+    ];
+
+    storage.saveMeasurement({
+      ...newEntry,
+      data: chartData
+    });
+    setActiveMeasurement({
+      ...newEntry,
+      data: chartData
+    });
     
     const observation = {
       sensor_data: rawData
@@ -190,7 +218,7 @@ export default function App() {
       <main className="flex flex-1 overflow-hidden relative">
         {/* Sidebar */}
         <aside className={`
-          fixed inset-y-0 left-0 w-80 bg-white border-r border-slate-200 z-40 transform transition-transform duration-300 ease-in-out flex flex-col p-6 gap-6
+          fixed inset-y-0 left-0 w-80 bg-white border-r border-slate-200 z-40 transform transition-transform duration-300 ease-in-out flex flex-col p-4 md:p-6 gap-6
           md:relative md:translate-x-0
           ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
         `}>
@@ -230,6 +258,26 @@ export default function App() {
             </button>
           </div>
 
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex items-center justify-between mb-4">
+               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Recent History</h3>
+               <button 
+                onClick={() => storage.clearAll()}
+                className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors uppercase tracking-tight"
+               >
+                Clear All
+               </button>
+            </div>
+            <MeasurementHistory 
+              activeId={activeMeasurement?.id}
+              onSelect={(entry) => {
+                setActiveMeasurement(entry);
+                setActiveFile(entry.source);
+                setIsHistoryOpen(false);
+              }}
+            />
+          </div>
+
           {activeFile && (
             <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
               <h4 className="text-xs font-bold text-slate-400 uppercase mb-2 tracking-tight">Active Source</h4>
@@ -237,9 +285,14 @@ export default function App() {
             </div>
           )}
 
-          <div className="mt-auto">
+          <div className="mt-auto pt-4 border-t border-slate-100">
             <button 
-              onClick={() => { setHistory([]); setActiveFile(null); setIsSidebarOpen(false); }}
+              onClick={() => { 
+                setHistory([]); 
+                setActiveFile(null); 
+                setActiveMeasurement(null);
+                setIsSidebarOpen(false); 
+              }}
               disabled={busy}
               className="w-full py-2 px-4 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
             >
@@ -259,7 +312,7 @@ export default function App() {
 
         {/* Chat Area */}
         <section className="flex-1 flex flex-col bg-[#F1F5F9] relative overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+          <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 transition-all">
             {history.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-4 py-12">
                 <div className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-[2rem] shadow-xl flex items-center justify-center mb-4">
@@ -359,9 +412,30 @@ export default function App() {
         </DialogContent>
       </Dialog>
 
+      {/* Signal Viewer Dialog */}
+      <Dialog open={!!activeMeasurement} onOpenChange={(open) => !open && setActiveMeasurement(null)}>
+        <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] bg-white border-slate-200 text-slate-900 overflow-hidden p-0 flex flex-col rounded-2xl shadow-2xl transition-all">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Signal Analysis Viewer</DialogTitle>
+            <DialogDescription>Detailed visualization of recorded heart vibrations signal</DialogDescription>
+          </DialogHeader>
+          {activeMeasurement && (
+            <SignalViewer 
+              data={activeMeasurement.data}
+              title={activeMeasurement.source}
+              onClose={() => setActiveMeasurement(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Error Dialog */}
       <Dialog open={showDeviceError} onOpenChange={setShowDeviceError}>
         <DialogContent className="sm:max-w-md bg-white border-slate-200 text-slate-900 overflow-hidden p-6 rounded-2xl shadow-xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Device Compatibility Error</DialogTitle>
+            <DialogDescription>Information about required sensors for measurement</DialogDescription>
+          </DialogHeader>
           <MobileOnlyError onClose={() => setShowDeviceError(false)} />
         </DialogContent>
       </Dialog>

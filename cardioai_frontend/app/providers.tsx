@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ThemeProvider } from 'next-themes';
+import { ThemeProvider } from './theme-provider';
 import { ErrorBoundary } from '@/app/error-boundary';
 import { AnalyticsInit } from '@/app/analytics-init';
 import { AnalyticsProvider } from '@/lib/analytics/AnalyticsProvider';

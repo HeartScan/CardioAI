@@ -71,8 +71,6 @@ export default function RootLayout({
         <link rel="app-ads-txt" href="/app-ads.txt" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/cropped-logo-icon-192x192.png" />
-        <link rel="preload" href="/images/logo.webp" as="image" />
-        <link rel="preload" href="/images/boy.webp" as="image" />
         
         {/* DNS prefetching for performance */}
         <link rel="dns-prefetch" href="https://heartscan.app" />
