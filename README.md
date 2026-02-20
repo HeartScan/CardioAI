@@ -103,5 +103,14 @@ To get a local copy up and running, follow these simple steps.
 └── README.md
 ```
 
+## 📚 Educational Resources & Open Source
+
+### Seismocardiography (SCG)
+*   **[What is SCG?](https://heartscan.app/about-scg)** — A detailed explanation of capturing cardiac mechanical vibrations using an accelerometer. Unlike ECG (electrical signals), SCG measures the mechanical work of the heart (valve opening/closing, ventricular contraction).
+*   **[Interpretation Guide](https://heartscan.app/primary-care-guide)** — A practical visual guide to SCG waveforms for primary care physicians. It helps in recognizing patterns (PAC, PVC, Atrial Fibrillation) based on mechanical signals.
+
+### Open Source Initiative
+*   **[OpenSCG](https://github.com/HeartScan/openSCG)** — An open-source infrastructure project aiming to turn any smartphone into a seismocardiography sensor, removing hardware cost barriers in telemedicine.
+
 ---
 *Disclaimer: This application is for demonstration purposes only and is not a certified medical device.*
