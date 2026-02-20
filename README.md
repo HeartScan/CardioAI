@@ -1,91 +1,107 @@
-# CardioAI
-
-**CardioAI** is a demonstration web application that leverages Artificial Intelligence for primary heart rhythm analysis based on Seismocardiography (SCG). The application transforms a smartphone into a diagnostic tool capable of capturing subtle chest vibrations caused by cardiac activity.
+<div align="center">
+  <h1>CardioAI: Your Heart's Health in Your Hands</h1>
+  <p>
+    <b>An AI-powered clinical support system that transforms any smartphone into a seismocardiography (SCG) device for primary heart rhythm analysis.</b>
+  </p>
+  <p>
+    <a href="#-key-features">Key Features</a> •
+    <a href="#-tech-stack">Tech Stack</a> •
+    <a href="#-live-demo">Live Demo</a> •
+    <a href="#-getting-started">Getting Started</a> •
+    <a href="#-project-structure">Project Structure</a>
+  </p>
+</div>
 
 ---
+
+**CardioAI** is a groundbreaking web application designed for a Google competition, demonstrating how AI can make primary cardiac diagnostics more accessible. By leveraging the built-in accelerometers in modern smartphones, CardioAI captures and analyzes seismocardiograms (SCG) — the subtle chest vibrations created by the heart's mechanical functions. This provides a non-invasive, cost-effective, and readily available method for preliminary heart rhythm assessment.
+
+Our system combines a sophisticated **FastAPI** backend for AI orchestration with a responsive, mobile-first **Next.js** frontend, delivering a seamless experience for both clinicians and patients.
+
+## ✨ Key Features
+
+- **AI-Powered Chat:** An intuitive chat interface where clinicians can upload measurement data and receive instant analysis and insights from a medical Large Language Model (LLM).
+- **Real-Time Data Capture:** Perform live SCG measurements directly in the browser using the smartphone's accelerometer.
+- **Measurement History & Storage:** All measurements are automatically saved in the browser's **Local Storage**. A clean, accessible history panel allows for quick review and re-analysis of past recordings.
+- **Advanced Signal Visualization:**
+  - **Full-Screen Interactive Viewer:** A powerful, full-screen modal for detailed signal analysis.
+  - **Dual-Mode Display:** Switch between **Standard View** (a zoomed-in chart with a full-signal overview for navigation) and **Split View** (three sequential charts for in-depth analysis of different signal segments).
+  - **Mobile-First & Touch-Friendly:** The entire visualization interface is optimized for mobile devices, with large touch targets and intuitive gesture-based navigation (drag, resize, and zoom).
+- **Seamless Backend Integration:** The frontend communicates with a powerful backend that orchestrates calls to specialized signal analysis APIs and medical LLMs.
+
+## 🛠️ Tech Stack
+
+| Area | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend** | [**Next.js**](https://nextjs.org/) (React) | SSR, fast performance, and a modern UI. |
+| | [**Tailwind CSS**](https://tailwindcss.com/) | For a utility-first, responsive design. |
+| | [**uPlot**](https://github.com/leeoniya/uPlot) | A fast, memory-efficient, and powerful charting library for signal visualization. |
+| | [**shadcn/ui**](https://ui.shadcn.com/) & [**Radix**](https://www.radix-ui.com/) | For accessible, unstyled UI components (Dialogs, Buttons). |
+| | [**Lucide React**](https://lucide.dev/) | For consistent and beautiful icons. |
+| **Backend** | [**FastAPI**](https://fastapi.tiangolo.com/) | High-performance Python framework for building APIs. |
+| | **Dr7.ai & HeartScan API** | Specialized APIs for medical LLM insights and SCG signal processing. |
+| **Deployment**| [**Vercel**](https://vercel.com/) & [**Render**](https://render.com/) | For seamless, scalable deployment of frontend and backend. |
+
+## 🚀 Live Demo
+
+[Link to your live Vercel/Render deployment]
+
+## 🏁 Getting Started
+
+To get a local copy up and running, follow these simple steps.
+
+### Prerequisites
+
+- Python 3.8+
+- Node.js 18.17+
+- `pip` and `npm`
+
+### Installation & Startup
+
+1.  **Clone the repository:**
+    ```sh
+    git clone https://github.com/HeartScan/CardioAI.git
+    cd CardioAI
+    ```
+2.  **Configure Backend:**
+    - Navigate to `cardioai_backend/`.
+    - Create a `.env` file from `.env.example` and add your API keys (`HEARTSCAN_API_KEY`, `DR7_API_KEY`).
+    - Run the backend:
+      ```sh
+      python -m venv venv
+      source venv/bin/activate # On Windows: venv\Scripts\activate
+      pip install -r requirements.txt
+      python main.py
+      ```
+3.  **Configure Frontend:**
+    - Navigate to `cardioai_frontend/`.
+    - Create a `.env.local` file from `.env.example` and set `NEXT_PUBLIC_CARDIOAI_BACKEND_URL=http://localhost:8000`.
+    - Run the frontend:
+      ```sh
+      npm install
+      npm run dev
+      ```
+4.  Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 📂 Project Structure
 
-The project is divided into two main parts:
-
-*   **`cardioai_backend/`**: A **FastAPI**-based backend. It handles data orchestration and communicates with the Math API (signal analysis) and the Dr7 API (medical LLM model).
-*   **`cardioai_frontend/`**: A **Next.js**-based frontend. It provides a chat interface, real-time accelerometer data capture, and visualization of the measurement process.
-
----
-
-## ⚙️ Environment Setup
-
-To run the application, you need to configure environment variables. Each folder (`cardioai_backend` and `cardioai_frontend`) contains an `.env.example` file that can be used as a template.
-
-### 🐍 Backend (`cardioai_backend/.env`)
-| Variable | Description |
-| :--- | :--- |
-| `HEARTSCAN_API_KEY` | API key for the HeartScan Math API to analyze SCG signals. |
-| `DR7_API_KEY` | API key for Dr7.ai to access the medical LLM. |
-| `PORT` | Port on which the server will run (default is 8000). |
-
-### Backend config (`cardioai_backend/config.ini`)
-
-- The **system prompt** is stored in `cardioai_backend/config.ini` (`[DEFAULT] SYSTEM_PROMPT`).
-- Dr7/HeartScan endpoints and LLM parameters are also configurable there.
-
-### Secrets
-
-- Set `HEARTSCAN_API_KEY` / `DR7_API_KEY` via environment variables (recommended for both local dev and production).
-
-### ⚛️ Frontend (`cardioai_frontend/.env`)
-| Variable | Description |
-| :--- | :--- |
-| `CARDIOAI_BACKEND_URL` | The URL of your deployed backend (e.g., on Render). |
-
----
-
-## 🚀 Local Startup
-
-### 1. Start the Backend
-```bash
-cd cardioai_backend
-python -m venv venv
-source venv/bin/activate  # For Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python main.py
 ```
-
-### 2. Start the Frontend
-```bash
-cd cardioai_frontend
-npm install
-npm run dev
+.
+├── cardioai_backend/     # FastAPI application
+│   ├── api/              # API endpoints (e.g., chat)
+│   ├── services/         # Business logic (HeartScan, Dr7 integration)
+│   └── main.py           # Main application entrypoint
+│
+├── cardioai_frontend/    # Next.js application
+│   ├── app/              # Main app router directory
+│   │   └── cardio-ai/    # The main application page
+│   ├── components/       # Reusable React components
+│   │   ├── SignalViewer.tsx  # Main signal visualization component
+│   │   └── ChartWorkspace.tsx # Logic for high/low res modes
+│   └── lib/              # Utility functions and libraries
+│
+└── README.md
 ```
 
 ---
-
-## 🌍 Deployment (Production)
-
-### Backend (Render)
-1. Create a new **Web Service** on Render.com.
-2. Root Directory: (leave empty, or set to the repository root).
-3. Build Command: `pip install -r cardioai_backend/requirements.txt`.
-4. Start Command: `python -m cardioai_backend.main`.
-5. Add the API keys in the **Environment Variables** section.
-
-### Frontend (Vercel)
-1. Create a new project on Vercel.com.
-2. Specify the Root Directory: `cardioai_frontend`.
-3. Framework Preset: `Next.js`.
-4. Add `CARDIOAI_BACKEND_URL` to the Environment Variables.
-5. Click **Deploy**.
-
----
-
-## 📚 Resources and Technologies
-
-### Seismocardiography (SCG)
-*   **[What is SCG?](https://heartscan.app/about-scg)** — A detailed explanation of capturing cardiac mechanical vibrations using an accelerometer. Unlike ECG (electrical signals), SCG measures the mechanical work of the heart (valve opening/closing, ventricular contraction).
-*   **[Interpretation Guide](https://heartscan.app/primary-care-guide)** — A practical visual guide to SCG waveforms for primary care physicians. It helps in recognizing patterns (PAC, PVC, Atrial Fibrillation) based on mechanical signals.
-
-### Open Source
-*   **[OpenSCG](https://github.com/HeartScan/openSCG)** — An open-source infrastructure project aiming to turn any smartphone into a seismocardiography sensor, removing hardware cost barriers in telemedicine.
-
----
-*Disclaimer: This application is intended for educational and demonstration purposes only and does not replace a visit to a doctor.*
+*Disclaimer: This application is for demonstration purposes only and is not a certified medical device.*
