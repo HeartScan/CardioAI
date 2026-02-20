@@ -13,6 +13,10 @@
 
 ---
 
+<div align="center">
+  <img src="images/interface.jpg" alt="CardioAI Interface" width="800"/>
+</div>
+
 **CardioAI** is a groundbreaking clinical support system designed for the Google competition. It demonstrates the power of **MedGemma** in making primary cardiac diagnostics accessible. By capturing seismocardiograms (SCG) via smartphone accelerometers, CardioAI provides a non-invasive, AI-orchestrated platform for preliminary heart rhythm assessment and structured clinical decision-making.
 
 ## 🧠 MedGemma & Agentic Workflow
