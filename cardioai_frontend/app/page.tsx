@@ -138,8 +138,6 @@ export default function App() {
         }
         throw new Error(errorMessage);
       }
->>>>+++ REPLACE
-
       
       const data = await res.json();
       setHistory(data.history);
