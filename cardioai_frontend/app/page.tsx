@@ -78,21 +78,21 @@ export default function App() {
       }
 
       // Helper for retries (handles cold starts)
-      const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, backoff = 1500) => {
+      const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, backoff = 2000) => {
         for (let i = 0; i < retries; i++) {
           try {
             const res = await fetch(url, options);
-            // If it's a server error or timeout, we might want to retry
-            if (res.status === 500 || res.status === 503 || res.status === 504 || !res.ok) {
-              const errorData = await res.json().catch(() => ({}));
-              // Check for the specific "Math API Error" which indicates a backend failure
-              if (i < retries - 1) {
-                console.warn(`API attempt ${i + 1} failed, retrying in ${backoff}ms...`, errorData);
-                await new Promise(resolve => setTimeout(resolve, backoff));
-                backoff *= 2; // Exponential backoff
-                continue;
-              }
-              return res; // Last attempt, return as is
+            
+            if (res.ok) return res;
+
+            // If it's a server error or gateway issue (502, 503, 504), definitely retry
+            const shouldRetry = res.status >= 500 || res.status === 429;
+            
+            if (shouldRetry && i < retries - 1) {
+              console.warn(`API attempt ${i + 1} failed with status ${res.status}, retrying in ${backoff}ms...`);
+              await new Promise(resolve => setTimeout(resolve, backoff));
+              backoff *= 2;
+              continue;
             }
             return res;
           } catch (err) {
@@ -104,7 +104,7 @@ export default function App() {
             throw err;
           }
         }
-        return fetch(url, options); // Fallback
+        return fetch(url, options);
       };
 
       const res = await fetchWithRetry("/api/cardio-ai/chat", {
@@ -118,9 +118,28 @@ export default function App() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || `API failed: ${res.status}`);
+        let errorMessage = `API failed: ${res.status}`;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorMessage;
+          // If the error is still JSON stringified (common in our proxy), parse it
+          if (typeof errorMessage === 'string' && errorMessage.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(errorMessage);
+              errorMessage = parsed.detail || parsed.error || errorMessage;
+            } catch {}
+          }
+        } catch {
+          // If not JSON, maybe it's HTML error page
+          const text = await res.text();
+          if (text.includes('<title>502')) errorMessage = "Service is warming up (502 Bad Gateway). Please try again in a moment.";
+          else if (text.includes('<title>504')) errorMessage = "Service timeout (504 Gateway Timeout). Backend is taking too long.";
+          else errorMessage = text.slice(0, 100); // Show first 100 chars of whatever it is
+        }
+        throw new Error(errorMessage);
       }
+>>>>+++ REPLACE
+
       
       const data = await res.json();
       setHistory(data.history);
