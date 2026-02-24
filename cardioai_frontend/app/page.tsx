@@ -77,7 +77,37 @@ export default function App() {
         setMessage("");
       }
 
-      const res = await fetch("/api/cardio-ai/chat", {
+      // Helper for retries (handles cold starts)
+      const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, backoff = 1500) => {
+        for (let i = 0; i < retries; i++) {
+          try {
+            const res = await fetch(url, options);
+            // If it's a server error or timeout, we might want to retry
+            if (res.status === 500 || res.status === 503 || res.status === 504 || !res.ok) {
+              const errorData = await res.json().catch(() => ({}));
+              // Check for the specific "Math API Error" which indicates a backend failure
+              if (i < retries - 1) {
+                console.warn(`API attempt ${i + 1} failed, retrying in ${backoff}ms...`, errorData);
+                await new Promise(resolve => setTimeout(resolve, backoff));
+                backoff *= 2; // Exponential backoff
+                continue;
+              }
+              return res; // Last attempt, return as is
+            }
+            return res;
+          } catch (err) {
+            if (i < retries - 1) {
+              await new Promise(resolve => setTimeout(resolve, backoff));
+              backoff *= 2;
+              continue;
+            }
+            throw err;
+          }
+        }
+        return fetch(url, options); // Fallback
+      };
+
+      const res = await fetchWithRetry("/api/cardio-ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
