@@ -14,6 +14,20 @@ const nextConfig = {
   experimental: {
     webpackBuildWorker: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/cardio-ai',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/cardio-ai/:path*',
+        destination: '/',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default nextConfig;
